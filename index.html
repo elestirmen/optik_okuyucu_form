@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tarayıcı Tabanlı Optik Form Okuyucu</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0c1224;
+      --panel: rgba(255, 255, 255, 0.03);
+      --border: rgba(255, 255, 255, 0.08);
+      --ink: #e5edff;
+      --muted: #9fb0d2;
+      --accent: #10b981;
+      --accent-2: #60a5fa;
+      --warn: #f59e0b;
+      --danger: #f87171;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at 20% 20%, rgba(96,165,250,0.12), transparent 30%), radial-gradient(circle at 80% 0%, rgba(16,185,129,0.16), transparent 35%), var(--bg);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+    h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.02em; }
+    p { color: var(--muted); line-height: 1.5; }
+    a { color: var(--accent-2); }
+    .app {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    header h1 { flex: 1 1 auto; }
+    .badge {
+      padding: 6px 10px;
+      border-radius: 12px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .tabs {
+      display: inline-flex;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+      background: var(--panel);
+    }
+    .tabs button {
+      background: transparent;
+      border: none;
+      color: var(--muted);
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: background 0.2s, color 0.2s;
+    }
+    .tabs button.active {
+      background: rgba(255,255,255,0.06);
+      color: var(--ink);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 16px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      backdrop-filter: blur(10px);
+      position: relative;
+    }
+    .card h3 {
+      margin-bottom: 6px;
+      font-size: 18px;
+    }
+    .card .hint { margin-top: 2px; font-size: 12px; color: var(--muted); }
+    label { display: block; margin: 10px 0 4px; color: var(--ink); font-weight: 500; }
+    input, select {
+      width: 100%;
+      padding: 9px 10px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.06);
+      color: var(--ink);
+      font-size: 14px;
+      outline: none;
+      transition: border 0.2s;
+    }
+    input:focus, select:focus { border-color: var(--accent-2); }
+    .btn {
+      background: linear-gradient(135deg, var(--accent), #34d399);
+      color: #062415;
+      border: none;
+      padding: 11px 14px;
+      border-radius: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 12px 30px rgba(16, 185, 129, 0.25);
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+    }
+    .btn.secondary {
+      background: rgba(255,255,255,0.06);
+      color: var(--ink);
+      box-shadow: none;
+      border: 1px solid var(--border);
+    }
+    .btn:active { transform: translateY(1px); box-shadow: 0 8px 18px rgba(16,185,129,0.18); }
+    .view { display: none; }
+    .view.active { display: block; }
+    .form-preview-wrap {
+      background: #fff;
+      border-radius: 14px;
+      padding: 12px;
+      border: 1px dashed #cbd5e1;
+    }
+    .form-page {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1.414;
+      background: #fafafa;
+      color: #111;
+      border: 2px solid #111;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 14px 60px rgba(0,0,0,0.16);
+    }
+    .form-header {
+      position: relative;
+      z-index: 2;
+      display: grid;
+      grid-template-columns: 140px 1fr 200px;
+      gap: 8px;
+      padding: 12px 16px 6px;
+      border-bottom: 2px solid #111;
+      background: linear-gradient(135deg, #e5e7eb, #f8fafc);
+    }
+    .qr-box {
+      width: 120px;
+      height: 120px;
+      border: 1px solid #111;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      background: #fff;
+    }
+    .info-block {
+      display: grid;
+      grid-template-rows: repeat(2, 1fr);
+      gap: 8px;
+    }
+    .info-line {
+      border: 1px solid #111;
+      background: #fff;
+      padding: 10px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .info-line span { font-weight: 700; }
+    .form-body {
+      position: relative;
+      padding: 12px;
+      height: calc(100% - 150px);
+    }
+    .bubble-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+    .bubble {
+      position: absolute;
+      border: 1.6px solid #111;
+      border-radius: 999px;
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      background: #fff;
+      user-select: none;
+    }
+    .bubble:hover { background: #e2e8f0; }
+    .question-label {
+      position: absolute;
+      font-weight: 700;
+      font-size: 13px;
+    }
+    .student-label {
+      position: absolute;
+      font-weight: 700;
+      font-size: 12px;
+      color: #111;
+    }
+    .student-box {
+      position: absolute;
+      width: 24px;
+      height: 22px;
+      border: 1.2px solid #111;
+      border-radius: 4px;
+      background: #fff;
+      display: grid;
+      place-items: center;
+      font-size: 12px;
+      color: #111;
+      user-select: none;
+    }
+    .video-wrap {
+      position: relative;
+      background: #0b162f;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    video {
+      width: 100%;
+      display: block;
+      max-height: 400px;
+      object-fit: cover;
+      background: #030712;
+    }
+    .overlay {
+      position: absolute;
+      inset: 12px;
+      border: 2px dashed rgba(255,255,255,0.4);
+      border-radius: 12px;
+      pointer-events: none;
+      box-shadow: 0 0 0 999px rgba(0,0,0,0.35);
+    }
+    .canvas-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+    canvas {
+      width: 100%;
+      background: #0a0f1c;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      min-height: 200px;
+    }
+    .result-box {
+      background: rgba(16,185,129,0.08);
+      border: 1px solid rgba(16,185,129,0.35);
+      color: #ccfbe3;
+      padding: 12px;
+      border-radius: 12px;
+      margin-top: 10px;
+      font-size: 14px;
+    }
+    .log {
+      margin-top: 8px;
+      color: var(--warn);
+      font-size: 13px;
+      min-height: 18px;
+    }
+    .small { font-size: 12px; color: var(--muted); }
+    .flex {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    .tag {
+      padding: 4px 8px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: rgba(255,255,255,0.04);
+      font-size: 12px;
+      color: var(--muted);
+    }
+    @media (max-width: 720px) {
+      .form-header { grid-template-columns: 1fr; height: auto; }
+      .form-body { height: calc(100% - 200px); }
+      .overlay { inset: 8px; }
+    }
+    /* Yazdırma: sadece form alanı */
+    @media print {
+      body { background: #fff; }
+      .no-print { display: none !important; }
+      #printable {
+        visibility: visible;
+        position: absolute;
+        inset: 0;
+      }
+      #printable .form-page {
+        box-shadow: none;
+        border: 2px solid #000;
+      }
+    }
+  </style>
+  <!-- QR kod için küçük kütüphane -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script>
+    // OpenCV yüklenince çalışacak callback'i önceden tanımla
+    window.cvReady = false;
+    function onOpenCvReady() {
+      window.cvReady = true;
+      const badge = document.getElementById('cv-status');
+      if (badge) badge.textContent = 'OpenCV yüklendi';
+    }
+  </script>
+  <!-- OpenCV.js CDN -->
+  <script async src="https://docs.opencv.org/4.x/opencv.js" onload="cv['onRuntimeInitialized']=onOpenCvReady;" type="text/javascript"></script>
+</head>
+<body>
+  <div class="app">
+    <header class="no-print">
+      <h1>Optik Form Tasarla &amp; Oku</h1>
+      <span class="badge" id="cv-status">OpenCV yükleniyor...</span>
+      <div class="tabs">
+        <button class="active" data-view="designer">Form Tasarla / Yazdır</button>
+        <button data-view="reader">Kamera ile Oku</button>
+      </div>
+    </header>
+
+    <main>
+      <section id="designer" class="view active">
+        <div class="grid">
+          <div class="card">
+            <h3>Form Parametreleri</h3>
+            <div class="hint">Baloncuk yerleşimi hem yazdırma hem de OMR için ortak kullanılır.</div>
+            <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-top: 10px;">
+              <div>
+                <label for="questionCount">Soru Sayısı</label>
+                <input type="number" id="questionCount" min="1" max="200" value="20">
+              </div>
+              <div>
+                <label for="choiceCount">Şık Sayısı</label>
+                <select id="choiceCount">
+                  <option value="4">4 (A B C D)</option>
+                  <option value="5">5 (A B C D E)</option>
+                </select>
+              </div>
+              <div>
+                <label for="columnCount">Sütun Sayısı</label>
+                <select id="columnCount">
+                  <option value="1">1</option>
+                  <option value="2" selected>2</option>
+                </select>
+              </div>
+              <div>
+                <label for="questionNumberPosition">Soru Numarası</label>
+                <select id="questionNumberPosition">
+                  <option value="left" selected>Solda</option>
+                  <option value="right">Sağda</option>
+                </select>
+              </div>
+              <div>
+                <label for="studentDigits">Öğrenci No Hane</label>
+                <input type="number" id="studentDigits" min="4" max="12" value="8">
+              </div>
+              <div>
+                <label for="horizontalGap">Yatay boşluk (%)</label>
+                <input type="number" id="horizontalGap" value="1.0" step="0.1">
+              </div>
+              <div>
+                <label for="verticalGap">Dikey boşluk (%)</label>
+                <input type="number" id="verticalGap" value="1.0" step="0.1">
+              </div>
+              <div>
+                <label for="examId">Sınav ID / QR içeriği</label>
+                <input type="text" id="examId" value="ornek-sinav-1">
+              </div>
+              <div>
+                <label for="examTitle">Sınav Adı (başlık)</label>
+                <input type="text" id="examTitle" value="Genel Deneme">
+              </div>
+            </div>
+            <div class="btn-group" style="margin-top: 12px;">
+              <button class="btn" id="printBtn">Formu Yazdır</button>
+              <button class="btn secondary" id="refreshBtn">Formu Güncelle</button>
+              <span class="tag">QR: examId + zaman damgası</span>
+            </div>
+          </div>
+          <div class="card">
+            <h3>Form Önizleme</h3>
+            <div class="hint">Bu alan yazdırmaya uygundur, yazdırmada yalnızca sayfa görünür.</div>
+            <div id="printable" class="form-preview-wrap">
+              <div id="form-preview"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="reader" class="view">
+        <div class="grid">
+          <div class="card">
+            <h3>Kamera ile Oku</h3>
+            <div class="hint">Formu çerçeve içine sığdırın, ardından Tara butonuna basın.</div>
+            <div class="video-wrap">
+              <video id="video" playsinline></video>
+              <div class="overlay"></div>
+            </div>
+            <div class="btn-group" style="margin-top: 10px;">
+              <button class="btn" id="startCameraBtn">Kamerayı Başlat</button>
+              <button class="btn secondary" id="captureBtn">Tara / Fotoğraf Çek</button>
+              <label class="small">Eşik (baloncuk): <input type="number" id="fillThreshold" value="0.32" min="0" max="1" step="0.02" style="width:100px; display:inline-block;"> </label>
+              <label class="small">Yanlış cezası (4 yanlış 1 doğru için 0.25): <input type="number" id="penalty" value="0.25" step="0.05" min="0" max="1" style="width:100px; display:inline-block;"></label>
+            </div>
+            <div class="log" id="cameraLog"></div>
+          </div>
+          <div class="card">
+            <h3>İşlenen Görseller</h3>
+            <div class="canvas-row">
+              <div>
+                <div class="small">Yakalanan Kare</div>
+                <canvas id="captureCanvas"></canvas>
+              </div>
+              <div>
+                <div class="small">Kenar Tespiti (Canny)</div>
+                <canvas id="edgesCanvas"></canvas>
+              </div>
+              <div>
+                <div class="small">Perspektif Düzeltilmiş</div>
+                <canvas id="warpCanvas"></canvas>
+              </div>
+            </div>
+            <div class="result-box" id="omrResult">Sonuçlar burada görünecek.</div>
+            <div class="log" id="omrLog"></div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+  </script>
+</body>
+</html>
