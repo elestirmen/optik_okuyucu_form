@@ -435,6 +435,8 @@
     const FILL_MASK_RATIO = 0.32; // ROI içinde ölçüm yapılacak iç daire oranı (çerçeveyi daha az say)
     const BLANK_GUARD = 0.18; // max skor bunun altındaysa eşikten bağımsız olarak Boş kabul et
     const sessionResults = [];
+    let saveDirHandle = null;
+    const fileSaveSupported = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
     let layoutConfig = null;
     let answerKey = {};
     let videoStream = null;
@@ -460,6 +462,7 @@
       document.getElementById('downloadTxtBtn').addEventListener('click', downloadSessionTxt);
       document.getElementById('downloadCsvBtn').addEventListener('click', downloadSessionCsv);
       document.getElementById('downloadXlsxBtn').addEventListener('click', downloadSessionXlsx);
+      document.getElementById('downloadXlsxBtn').addEventListener('contextmenu', async (e) => { e.preventDefault(); await requestSaveDirectory(); });
       
       // Cevap anahtarı event listener'ları
       document.getElementById('answerKeySource').addEventListener('change', toggleAnswerKeyMode);
@@ -1215,6 +1218,7 @@
       };
       sessionResults.push(entry);
       renderSessionList();
+      persistEntrySafely(entry);
     }
 
     function renderSessionList() {
@@ -1273,6 +1277,69 @@
       a.download = 'oturum-sonuclari.csv';
       a.click();
       URL.revokeObjectURL(url);
+    }
+
+    function formatEntryTxt(entry) {
+      const answers = (entry.perQuestion || []).map(p => `${p.q}:${p.marked || '-'}/${p.status}`).join(' ');
+      return [
+        `Sira: ${entry.id}`,
+        `OgrenciNo: ${entry.studentNo || 'Bilinmiyor'}`,
+        `Dogru: ${entry.correct}`,
+        `Yanlis: ${entry.wrong}`,
+        `Bos: ${entry.blank}`,
+        `Coklu: ${entry.multi}`,
+        `Net: ${entry.net}`,
+        `Cevaplar: ${answers}`
+      ].join('\n');
+    }
+
+    async function requestSaveDirectory() {
+      if (!fileSaveSupported) return null;
+      try {
+        saveDirHandle = await window.showDirectoryPicker({ id: 'omr-save', mode: 'readwrite' });
+        return saveDirHandle;
+      } catch (e) {
+        console.warn('Klasor secimi iptal/izin yok', e);
+        return null;
+      }
+    }
+
+    async function saveEntryToFile(entry) {
+      if (!fileSaveSupported) return false;
+      try {
+        if (!saveDirHandle) {
+          const handle = await requestSaveDirectory();
+          if (!handle) return false;
+        }
+        const ts = new Date();
+        const tsStr = `${ts.getFullYear()}${String(ts.getMonth()+1).padStart(2,'0')}${String(ts.getDate()).padStart(2,'0')}-${String(ts.getHours()).padStart(2,'0')}${String(ts.getMinutes()).padStart(2,'0')}${String(ts.getSeconds()).padStart(2,'0')}`;
+        const fileName = `scan-${entry.id}-${tsStr}.txt`;
+        const fileHandle = await saveDirHandle.getFileHandle(fileName, { create: true });
+        const writable = await fileHandle.createWritable();
+        await writable.write(formatEntryTxt(entry));
+        await writable.close();
+        return true;
+      } catch (e) {
+        console.warn('Dosyaya yazma hatasi', e);
+        return false;
+      }
+    }
+
+    function fallbackDownloadSingle(entry) {
+      const blob = new Blob([formatEntryTxt(entry)], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `scan-${entry.id}.txt`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function persistEntrySafely(entry) {
+      // En azından tarayıcı destekliyorsa klasöre yaz, yoksa indirme başlat
+      saveEntryToFile(entry).then((ok) => {
+        if (!ok) fallbackDownloadSingle(entry);
+      });
     }
 
     function downloadSessionXlsx() {
