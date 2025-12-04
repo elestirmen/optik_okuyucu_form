@@ -413,6 +413,7 @@
             <div class="btn-group" style="margin-top:10px;">
               <button class="btn secondary" id="downloadTxtBtn" style="padding:6px 10px;font-size:11px;">TXT Listesi</button>
               <button class="btn secondary" id="downloadCsvBtn" style="padding:6px 10px;font-size:11px;">Excel (CSV)</button>
+              <button class="btn secondary" id="downloadXlsxBtn" style="padding:6px 10px;font-size:11px;">Excel (XLSX)</button>
               <span id="sessionCount" style="font-size:11px;color:var(--muted);">0 kayit</span>
             </div>
             <div class="result-details" id="sessionList">Henuz kayit yok.</div>
@@ -458,6 +459,7 @@
       document.getElementById('autoScanBtn').addEventListener('click', toggleAutoScan);
       document.getElementById('downloadTxtBtn').addEventListener('click', downloadSessionTxt);
       document.getElementById('downloadCsvBtn').addEventListener('click', downloadSessionCsv);
+      document.getElementById('downloadXlsxBtn').addEventListener('click', downloadSessionXlsx);
       
       // Cevap anahtarı event listener'ları
       document.getElementById('answerKeySource').addEventListener('change', toggleAnswerKeyMode);
@@ -1269,6 +1271,31 @@
       const a = document.createElement('a');
       a.href = url;
       a.download = 'oturum-sonuclari.csv';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function downloadSessionXlsx() {
+      if (sessionResults.length === 0) { alert('Kayit yok.'); return; }
+      const maxQ = Math.max(...sessionResults.map(r => (r.perQuestion || []).length || 0));
+      const header = ['Sira','OgrenciNo','Dogru','Yanlis','Bos','Coklu','Net'];
+      for (let i = 1; i <= maxQ; i++) header.push(`S${i}`);
+      const data = [header];
+      sessionResults.forEach(r => {
+        const row = [r.id, r.studentNo || '', r.correct, r.wrong, r.blank, r.multi, r.net];
+        const answers = r.perQuestion || [];
+        for (let i = 0; i < maxQ; i++) row.push(answers[i] ? (answers[i].marked || '') : '');
+        data.push(row);
+      });
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Sonuclar');
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'oturum-sonuclari.xlsx';
       a.click();
       URL.revokeObjectURL(url);
     }
