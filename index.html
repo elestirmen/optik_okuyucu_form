@@ -399,7 +399,8 @@
       ctx.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
       
       // Corner markers
-      drawCornerMarkers(ctx, canvas.width, canvas.height);
+      // Not: ctx.scale() uygulandığı için orijinal boyutları kullan
+      drawCornerMarkers(ctx, cfg.formWidth, cfg.formHeight);
       
       const margin = 15;
       const bubbleR = cfg.bubbleSize / 2;
