@@ -933,7 +933,7 @@
 
         const result = analyzeBubbles(warped);
       renderResults(result);
-      addSessionResult(result);
+      safeAddSessionResult(result);
         
         if (isAuto && result.correct + result.wrong > 0) {
           toggleAutoScan();
@@ -1188,6 +1188,14 @@
       
       const net = (correct - wrong * penalty).toFixed(2);
       return { correct, wrong, blank, multi, net, perQuestion, studentNo };
+    }
+
+    function safeAddSessionResult(r) {
+      try {
+        addSessionResult(r);
+      } catch (e) {
+        console.warn('Session log hatasi', e);
+      }
     }
 
     function renderResults(r) {
@@ -1747,7 +1755,7 @@
         
         const result = analyzeBubbles(warped);
         renderResults(result);
-        addSessionResult(result);
+        safeAddSessionResult(result);
         
         updateStatus('found', '✓ Form okundu!');
         setLog('cameraLog', '✅ Analiz tamamlandı!', 'success');
