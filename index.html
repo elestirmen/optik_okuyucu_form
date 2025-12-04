@@ -3,21 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tarayıcı Tabanlı Optik Form Okuyucu</title>
+  <title>Optik Form Tasarla & Oku</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #0c1224;
-      --panel: rgba(255, 255, 255, 0.03);
-      --border: rgba(255, 255, 255, 0.08);
+      --panel: rgba(255, 255, 255, 0.05);
+      --border: rgba(255, 255, 255, 0.12);
       --ink: #e5edff;
       --muted: #9fb0d2;
       --accent: #10b981;
       --accent-2: #60a5fa;
       --warn: #f59e0b;
-      --danger: #f87171;
     }
     * { box-sizing: border-box; }
     body {
@@ -28,289 +27,54 @@
       min-height: 100vh;
     }
     h1, h2, h3 { margin: 0; font-weight: 600; letter-spacing: -0.02em; }
-    p { color: var(--muted); line-height: 1.5; }
-    a { color: var(--accent-2); }
-    .app {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 24px 16px 48px;
-    }
-    header {
-      display: flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 12px;
-      margin-bottom: 16px;
-    }
+    .app { max-width: 1200px; margin: 0 auto; padding: 24px 16px 48px; }
+    header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 16px; }
     header h1 { flex: 1 1 auto; }
-    .badge {
-      padding: 6px 10px;
-      border-radius: 12px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      color: var(--muted);
-      font-size: 12px;
-    }
-    .tabs {
-      display: inline-flex;
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      overflow: hidden;
-      background: var(--panel);
-    }
-    .tabs button {
-      background: transparent;
-      border: none;
-      color: var(--muted);
-      padding: 10px 14px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: background 0.2s, color 0.2s;
-    }
-    .tabs button.active {
-      background: rgba(255,255,255,0.06);
-      color: var(--ink);
-    }
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 16px;
-    }
-    .card {
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 16px;
-      padding: 16px;
-      backdrop-filter: blur(10px);
-      position: relative;
-    }
-    .card h3 {
-      margin-bottom: 6px;
-      font-size: 18px;
-    }
-    .card .hint { margin-top: 2px; font-size: 12px; color: var(--muted); }
+    .badge { padding: 6px 10px; border-radius: 12px; background: var(--panel); border: 1px solid var(--border); color: var(--muted); font-size: 12px; }
+    .tabs { display: inline-flex; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--panel); }
+    .tabs button { border: none; background: transparent; color: var(--muted); padding: 10px 14px; cursor: pointer; font-weight: 600; }
+    .tabs button.active { background: rgba(255,255,255,0.08); color: var(--ink); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: 16px; padding: 16px; backdrop-filter: blur(10px); }
+    .card h3 { margin: 0 0 6px 0; font-size: 18px; }
+    .card .hint { font-size: 12px; color: var(--muted); margin-bottom: 8px; }
     label { display: block; margin: 10px 0 4px; color: var(--ink); font-weight: 500; }
-    input, select {
-      width: 100%;
-      padding: 9px 10px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: rgba(255,255,255,0.06);
-      color: var(--ink);
-      font-size: 14px;
-      outline: none;
-      transition: border 0.2s;
-    }
-    input:focus, select:focus { border-color: var(--accent-2); }
-    .btn {
-      background: linear-gradient(135deg, var(--accent), #34d399);
-      color: #062415;
-      border: none;
-      padding: 11px 14px;
-      border-radius: 12px;
-      font-weight: 700;
-      cursor: pointer;
-      box-shadow: 0 12px 30px rgba(16, 185, 129, 0.25);
-      transition: transform 0.12s ease, box-shadow 0.12s ease;
-    }
-    .btn.secondary {
-      background: rgba(255,255,255,0.06);
-      color: var(--ink);
-      box-shadow: none;
-      border: 1px solid var(--border);
-    }
-    .btn:active { transform: translateY(1px); box-shadow: 0 8px 18px rgba(16,185,129,0.18); }
-    .view { display: none; }
-    .view.active { display: block; }
-    .form-preview-wrap {
-      background: #fff;
-      border-radius: 14px;
-      padding: 12px;
-      border: 1px dashed #cbd5e1;
-    }
-    .form-page {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 1 / 1.414;
-      background: #fafafa;
-      color: #111;
-      border: 2px solid #111;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 14px 60px rgba(0,0,0,0.16);
-    }
-    .form-header {
-      position: relative;
-      z-index: 2;
-      display: grid;
-      grid-template-columns: 140px 1fr 200px;
-      gap: 8px;
-      padding: 12px 16px 6px;
-      border-bottom: 2px solid #111;
-      background: linear-gradient(135deg, #e5e7eb, #f8fafc);
-    }
-    .qr-box {
-      width: 120px;
-      height: 120px;
-      border: 1px solid #111;
-      display: grid;
-      place-items: center;
-      font-size: 12px;
-      background: #fff;
-    }
-    .info-block {
-      display: grid;
-      grid-template-rows: repeat(2, 1fr);
-      gap: 8px;
-    }
-    .info-line {
-      border: 1px solid #111;
-      background: #fff;
-      padding: 10px;
-      font-size: 14px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
+    input, select { width: 100%; padding: 9px 10px; border-radius: 10px; border: 1px solid var(--border); background: rgba(255,255,255,0.06); color: var(--ink); }
+    .btn { background: linear-gradient(135deg, var(--accent), #34d399); color: #062415; border: none; padding: 11px 14px; border-radius: 12px; font-weight: 700; cursor: pointer; }
+    .btn.secondary { background: rgba(255,255,255,0.08); color: var(--ink); border: 1px solid var(--border); }
+    .btn-group { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .view { display: none; } .view.active { display: block; }
+    .form-preview-wrap { background: #fff; border-radius: 14px; padding: 12px; border: 1px dashed #cbd5e1; }
+    .form-page { position: relative; width: 100%; aspect-ratio: 1/1.414; background: #fafafa; color: #111; border: 2px solid #111; border-radius: 8px; overflow: hidden; }
+    .form-header { display: grid; grid-template-columns: 140px 1fr 200px; gap: 8px; padding: 12px 16px 6px; border-bottom: 2px solid #111; background: linear-gradient(135deg, #e5e7eb, #f8fafc); }
+    .qr-box { width: 120px; height: 120px; border: 1px solid #111; display: grid; place-items: center; font-size: 12px; background: #fff; }
+    .info-block { display: grid; grid-template-rows: repeat(2, 1fr); gap: 8px; }
+    .info-line { border: 1px solid #111; background: #fff; padding: 10px; font-size: 14px; display: flex; align-items: center; gap: 12px; }
     .info-line span { font-weight: 700; }
-    .form-body {
-      position: relative;
-      padding: 12px;
-      height: calc(100% - 150px);
-    }
-    .bubble-layer {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-    }
-    .bubble {
-      position: absolute;
-      border: 1.6px solid #111;
-      border-radius: 999px;
-      width: 28px;
-      height: 28px;
-      display: grid;
-      place-items: center;
-      font-size: 12px;
-      background: #fff;
-      user-select: none;
-    }
-    .bubble:hover { background: #e2e8f0; }
-    .question-label {
-      position: absolute;
-      font-weight: 700;
-      font-size: 13px;
-    }
-    .student-label {
-      position: absolute;
-      font-weight: 700;
-      font-size: 12px;
-      color: #111;
-    }
-    .student-box {
-      position: absolute;
-      width: 24px;
-      height: 22px;
-      border: 1.2px solid #111;
-      border-radius: 4px;
-      background: #fff;
-      display: grid;
-      place-items: center;
-      font-size: 12px;
-      color: #111;
-      user-select: none;
-    }
-    .video-wrap {
-      position: relative;
-      background: #0b162f;
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      overflow: hidden;
-    }
-    video {
-      width: 100%;
-      display: block;
-      max-height: 400px;
-      object-fit: cover;
-      background: #030712;
-    }
-    .overlay {
-      position: absolute;
-      inset: 12px;
-      border: 2px dashed rgba(255,255,255,0.4);
-      border-radius: 12px;
-      pointer-events: none;
-      box-shadow: 0 0 0 999px rgba(0,0,0,0.35);
-    }
-    .canvas-row {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 12px;
-      margin-top: 12px;
-    }
-    canvas {
-      width: 100%;
-      background: #0a0f1c;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      min-height: 200px;
-    }
-    .result-box {
-      background: rgba(16,185,129,0.08);
-      border: 1px solid rgba(16,185,129,0.35);
-      color: #ccfbe3;
-      padding: 12px;
-      border-radius: 12px;
-      margin-top: 10px;
-      font-size: 14px;
-    }
-    .log {
-      margin-top: 8px;
-      color: var(--warn);
-      font-size: 13px;
-      min-height: 18px;
-    }
+    .form-body { position: relative; padding: 12px; height: calc(100% - 150px); }
+    .bubble-layer { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+    .bubble { position: absolute; border: 1.6px solid #111; border-radius: 999px; display: grid; place-items: center; font-size: 12px; background: #fff; }
+    .question-label { position: absolute; font-weight: 700; font-size: 13px; }
+    .student-label { position: absolute; font-weight: 700; font-size: 12px; color: #111; }
+    .student-box { position: absolute; width: 24px; height: 22px; border: 1.2px solid #111; border-radius: 4px; background: #fff; display: grid; place-items: center; font-size: 12px; color: #111; }
+    .video-wrap { position: relative; background: #0b162f; border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+    video { width: 100%; display: block; max-height: 400px; object-fit: cover; background: #030712; }
+    .overlay { position: absolute; inset: 12px; border: 2px dashed rgba(255,255,255,0.4); border-radius: 12px; pointer-events: none; box-shadow: 0 0 0 999px rgba(0,0,0,0.35); }
+    .canvas-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-top: 12px; }
+    canvas { width: 100%; background: #0a0f1c; border-radius: 10px; border: 1px solid var(--border); min-height: 200px; }
+    .result-box { background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.35); color: #ccfbe3; padding: 12px; border-radius: 12px; margin-top: 10px; font-size: 14px; }
+    .log { margin-top: 8px; color: var(--warn); font-size: 13px; min-height: 18px; }
     .small { font-size: 12px; color: var(--muted); }
-    .flex {
-      display: flex;
-      gap: 8px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-    .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
-    .tag {
-      padding: 4px 8px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      background: rgba(255,255,255,0.04);
-      font-size: 12px;
-      color: var(--muted);
-    }
-    @media (max-width: 720px) {
-      .form-header { grid-template-columns: 1fr; height: auto; }
-      .form-body { height: calc(100% - 200px); }
-      .overlay { inset: 8px; }
-    }
-    /* Yazdırma: sadece form alanı */
+    @media (max-width: 720px) { .form-header { grid-template-columns: 1fr; } .form-body { height: calc(100% - 200px); } }
     @media print {
       body { background: #fff; }
       .no-print { display: none !important; }
-      #printable {
-        visibility: visible;
-        position: absolute;
-        inset: 0;
-      }
-      #printable .form-page {
-        box-shadow: none;
-        border: 2px solid #000;
-      }
+      #printable { visibility: visible; position: absolute; inset: 0; }
+      #printable .form-page { box-shadow: none; border: 2px solid #000; }
     }
   </style>
-  <!-- QR kod için küçük kütüphane -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script>
-    // OpenCV yüklenince çalışacak callback'i önceden tanımla
     window.cvReady = false;
     function onOpenCvReady() {
       window.cvReady = true;
@@ -318,7 +82,6 @@
       if (badge) badge.textContent = 'OpenCV yüklendi';
     }
   </script>
-  <!-- OpenCV.js CDN -->
   <script async src="https://docs.opencv.org/4.x/opencv.js" onload="cv['onRuntimeInitialized']=onOpenCvReady;" type="text/javascript"></script>
 </head>
 <body>
@@ -337,63 +100,27 @@
         <div class="grid">
           <div class="card">
             <h3>Form Parametreleri</h3>
-            <div class="hint">Baloncuk yerleşimi hem yazdırma hem de OMR için ortak kullanılır.</div>
+            <div class="hint">Baloncuk yerleşimi hem yazdırma hem OMR için ortak.</div>
             <div class="grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); margin-top: 10px;">
-              <div>
-                <label for="questionCount">Soru Sayısı</label>
-                <input type="number" id="questionCount" min="1" max="200" value="20">
-              </div>
-              <div>
-                <label for="choiceCount">Şık Sayısı</label>
-                <select id="choiceCount">
-                  <option value="4">4 (A B C D)</option>
-                  <option value="5">5 (A B C D E)</option>
-                </select>
-              </div>
-              <div>
-                <label for="columnCount">Sütun Sayısı</label>
-                <select id="columnCount">
-                  <option value="1">1</option>
-                  <option value="2" selected>2</option>
-                </select>
-              </div>
-              <div>
-                <label for="questionNumberPosition">Soru Numarası</label>
-                <select id="questionNumberPosition">
-                  <option value="left" selected>Solda</option>
-                  <option value="right">Sağda</option>
-                </select>
-              </div>
-              <div>
-                <label for="studentDigits">Öğrenci No Hane</label>
-                <input type="number" id="studentDigits" min="4" max="12" value="8">
-              </div>
-              <div>
-                <label for="horizontalGap">Yatay boşluk (%)</label>
-                <input type="number" id="horizontalGap" value="1.0" step="0.1">
-              </div>
-              <div>
-                <label for="verticalGap">Dikey boşluk (%)</label>
-                <input type="number" id="verticalGap" value="1.0" step="0.1">
-              </div>
-              <div>
-                <label for="examId">Sınav ID / QR içeriği</label>
-                <input type="text" id="examId" value="ornek-sinav-1">
-              </div>
-              <div>
-                <label for="examTitle">Sınav Adı (başlık)</label>
-                <input type="text" id="examTitle" value="Genel Deneme">
-              </div>
+              <div><label for="questionCount">Soru Sayısı</label><input type="number" id="questionCount" min="1" max="200" value="20"></div>
+              <div><label for="choiceCount">Şık Sayısı</label><select id="choiceCount"><option value="4">4 (A B C D)</option><option value="5">5 (A B C D E)</option></select></div>
+              <div><label for="columnCount">Sütun Sayısı</label><select id="columnCount"><option value="1">1</option><option value="2" selected>2</option></select></div>
+              <div><label for="questionNumberPosition">Soru Numarası</label><select id="questionNumberPosition"><option value="left" selected>Solda</option><option value="right">Sağda</option></select></div>
+              <div><label for="studentDigits">Öğrenci No Hane</label><input type="number" id="studentDigits" min="4" max="12" value="8"></div>
+              <div><label for="horizontalGap">Yatay boşluk (%)</label><input type="number" id="horizontalGap" value="1.0" step="0.1"></div>
+              <div><label for="verticalGap">Dikey boşluk (%)</label><input type="number" id="verticalGap" value="1.0" step="0.1"></div>
+              <div><label for="examId">Sınav ID / QR içeriği</label><input type="text" id="examId" value="ornek-sinav-1"></div>
+              <div><label for="examTitle">Sınav Adı (başlık)</label><input type="text" id="examTitle" value="Genel Deneme"></div>
             </div>
             <div class="btn-group" style="margin-top: 12px;">
               <button class="btn" id="printBtn">Formu Yazdır</button>
               <button class="btn secondary" id="refreshBtn">Formu Güncelle</button>
-              <span class="tag">QR: examId + zaman damgası</span>
+              <span class="small">QR: examId + zaman damgası</span>
             </div>
           </div>
           <div class="card">
             <h3>Form Önizleme</h3>
-            <div class="hint">Bu alan yazdırmaya uygundur, yazdırmada yalnızca sayfa görünür.</div>
+            <div class="hint">Yazdırmada yalnızca sayfa görünür.</div>
             <div id="printable" class="form-preview-wrap">
               <div id="form-preview"></div>
             </div>
@@ -405,7 +132,7 @@
         <div class="grid">
           <div class="card">
             <h3>Kamera ile Oku</h3>
-            <div class="hint">Formu çerçeve içine sığdırın, ardından Tara butonuna basın.</div>
+            <div class="hint">Formu çerçeve içine sığdırın, Tara butonuna basın.</div>
             <div class="video-wrap">
               <video id="video" playsinline></video>
               <div class="overlay"></div>
@@ -413,26 +140,17 @@
             <div class="btn-group" style="margin-top: 10px;">
               <button class="btn" id="startCameraBtn">Kamerayı Başlat</button>
               <button class="btn secondary" id="captureBtn">Tara / Fotoğraf Çek</button>
-              <label class="small">Eşik (baloncuk): <input type="number" id="fillThreshold" value="0.32" min="0" max="1" step="0.02" style="width:100px; display:inline-block;"> </label>
-              <label class="small">Yanlış cezası (4 yanlış 1 doğru için 0.25): <input type="number" id="penalty" value="0.25" step="0.05" min="0" max="1" style="width:100px; display:inline-block;"></label>
+              <label class="small">Eşik: <input type="number" id="fillThreshold" value="0.32" min="0" max="1" step="0.02" style="width:90px;"></label>
+              <label class="small">Yanlış cezası: <input type="number" id="penalty" value="0.25" step="0.05" min="0" max="1" style="width:90px;"></label>
             </div>
             <div class="log" id="cameraLog"></div>
           </div>
           <div class="card">
             <h3>İşlenen Görseller</h3>
             <div class="canvas-row">
-              <div>
-                <div class="small">Yakalanan Kare</div>
-                <canvas id="captureCanvas"></canvas>
-              </div>
-              <div>
-                <div class="small">Kenar Tespiti (Canny)</div>
-                <canvas id="edgesCanvas"></canvas>
-              </div>
-              <div>
-                <div class="small">Perspektif Düzeltilmiş</div>
-                <canvas id="warpCanvas"></canvas>
-              </div>
+              <div><div class="small">Yakalanan Kare</div><canvas id="captureCanvas"></canvas></div>
+              <div><div class="small">Kenar Tespiti (Canny)</div><canvas id="edgesCanvas"></canvas></div>
+              <div><div class="small">Perspektif Düzeltilmiş</div><canvas id="warpCanvas"></canvas></div>
             </div>
             <div class="result-box" id="omrResult">Sonuçlar burada görünecek.</div>
             <div class="log" id="omrLog"></div>
@@ -443,6 +161,432 @@
   </div>
 
   <script>
+    const WARP_WIDTH = 1200;
+    const WARP_HEIGHT = 1700;
+    let layoutConfig = null;
+    let answerKey = {};
+    let videoStream = null;
+    let qrInstance = null;
+
+    document.addEventListener('DOMContentLoaded', () => {
+      setupTabs();
+      setupInputs();
+      generateAndRender();
+      document.getElementById('printBtn').addEventListener('click', () => window.print());
+      document.getElementById('refreshBtn').addEventListener('click', generateAndRender);
+      document.getElementById('startCameraBtn').addEventListener('click', initCamera);
+      document.getElementById('captureBtn').addEventListener('click', onCaptureFrame);
+      window.addEventListener('beforeunload', stopCamera);
+    });
+
+    function setupTabs() {
+      const buttons = document.querySelectorAll('.tabs button');
+      buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          buttons.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+          document.getElementById(btn.dataset.view).classList.add('active');
+          if (btn.dataset.view === 'reader') initCamera(); else stopCamera();
+        });
+      });
+    }
+
+    function setupInputs() {
+      ['questionCount','choiceCount','columnCount','questionNumberPosition','horizontalGap','verticalGap','examId','examTitle','studentDigits']
+        .forEach(id => {
+          const el = document.getElementById(id);
+          if (el) el.addEventListener('input', debounce(generateAndRender, 120));
+        });
+    }
+
+    function debounce(fn, delay) { let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), delay); }; }
+
+    function generateAndRender() {
+      layoutConfig = generateLayoutConfig();
+      renderFormPreview(layoutConfig);
+      generateAnswerKey(layoutConfig);
+    }
+
+    // Layout üretimi: normalize koordinatlar
+    function generateLayoutConfig() {
+      const questionCount = clampInt(document.getElementById('questionCount').value, 1, 200, 20);
+      const choiceCount = clampInt(document.getElementById('choiceCount').value, 2, 6, 4);
+      const columnCount = clampInt(document.getElementById('columnCount').value, 1, 3, 2);
+      const questionNumberPosition = document.getElementById('questionNumberPosition').value || 'left';
+      const studentDigits = clampInt(document.getElementById('studentDigits').value, 4, 12, 8);
+      const horizontalGapNorm = clampNumber(document.getElementById('horizontalGap').value, 0, 8, 1.0) / 100;
+      const verticalGapNorm = clampNumber(document.getElementById('verticalGap').value, 0, 8, 1.0) / 100;
+      const examId = (document.getElementById('examId').value || 'ornek-sinav-1').trim();
+      const examTitle = (document.getElementById('examTitle').value || 'Genel Deneme').trim();
+
+      const headerHeight = 0.14;
+      const studentBlockHeight = 0.18;
+      const topMargin = headerHeight + studentBlockHeight + 0.01;
+      const bottomMargin = 0.04;
+      const sideMargin = 0.04;
+      const usableHeight = 1 - topMargin - bottomMargin;
+      const usableWidth = 1 - sideMargin * 2;
+      const questionsPerColumn = Math.ceil(questionCount / columnCount);
+      const columnWidth = usableWidth / columnCount;
+      const innerPadding = 0.02;
+
+      const questionHeight = usableHeight / questionsPerColumn;
+      const bubbleSize = Math.min(0.035, (columnWidth * 0.7) / choiceCount);
+      const bubbleGapX = Math.max(0.002, horizontalGapNorm);
+      const bubbleGapY = Math.max(0.002, verticalGapNorm);
+
+      const questions = [];
+      const studentId = { digits: studentDigits, bubbles: [] };
+
+      // Öğrenci No baloncukları: her hanede 0-9
+      const digitBubbleSize = 0.018;
+      const digitGapY = 0.0025;
+      const digitsStartY = headerHeight + 0.02;
+      
+      // Öğrenci numarası bölümü için kullanılabilir genişlik (header içinde)
+      const studentIdAreaWidth = 0.5; // Header'ın yaklaşık yarısı
+      const digitsStartX = sideMargin + 0.01;
+      const digitsEndX = digitsStartX + studentIdAreaWidth;
+      
+      // Toplam genişlik: tüm sütunlar + aralarındaki boşluklar
+      const totalBubblesWidth = studentDigits * digitBubbleSize;
+      const availableSpaceForGaps = digitsEndX - digitsStartX - totalBubblesWidth;
+      const columnSpacing = studentDigits > 1 ? availableSpaceForGaps / (studentDigits - 1) : 0;
+      
+      for (let col = 0; col < studentDigits; col++) {
+        const colX = digitsStartX + col * (digitBubbleSize + columnSpacing);
+        // Sınır kontrolü: formun dışına taşmaması için
+        if (colX + digitBubbleSize > 1 - sideMargin) break;
+        for (let d = 0; d < 10; d++) {
+          const y = digitsStartY + d * (digitBubbleSize + digitGapY);
+          studentId.bubbles.push({ digit: d, col, x: colX, y, width: digitBubbleSize, height: digitBubbleSize });
+        }
+      }
+
+      for (let i = 0; i < questionCount; i++) {
+        const colIndex = Math.floor(i / questionsPerColumn);
+        const rowIndex = i % questionsPerColumn;
+        const xBase = sideMargin + colIndex * columnWidth + innerPadding;
+        const yBase = topMargin + rowIndex * questionHeight + bubbleGapY;
+        const bubbleRowWidth = columnWidth - innerPadding * 2;
+        const bubbleStartX = questionNumberPosition === 'left' ? xBase + 0.05 : xBase + bubbleRowWidth * 0.25;
+        const choices = [];
+        for (let c = 0; c < choiceCount; c++) {
+          const x = bubbleStartX + c * (bubbleSize + bubbleGapX);
+          const y = yBase;
+          choices.push({ option: String.fromCharCode(65 + c), x: Math.min(0.99, x), y: Math.min(0.99, y), width: bubbleSize, height: bubbleSize });
+        }
+        questions.push({ questionNumber: i + 1, choices });
+      }
+
+      return { examId, examTitle, pageWidth: 1, pageHeight: 1, questionCount, choiceCount, columnCount, questionNumberPosition, studentId, generatedAt: new Date().toISOString(), questions };
+    }
+
+    // Formu ekrana çiz
+    function renderFormPreview(config) {
+      const container = document.getElementById('form-preview');
+      container.innerHTML = '';
+      const page = document.createElement('div');
+      page.className = 'form-page';
+
+      const header = document.createElement('div');
+      header.className = 'form-header';
+      const qrBox = document.createElement('div');
+      qrBox.className = 'qr-box';
+      qrBox.id = 'qr-box';
+      qrBox.textContent = 'QR';
+      header.appendChild(qrBox);
+      const info = document.createElement('div');
+      info.className = 'info-block';
+      info.innerHTML = `<div class="info-line"><span>Öğrenci No</span><div style="flex:1; border-bottom:1px solid #111;"></div></div>
+                        <div class="info-line"><span>Ad Soyad</span><div style="flex:1; border-bottom:1px solid #111;"></div></div>`;
+      header.appendChild(info);
+      const meta = document.createElement('div');
+      meta.className = 'info-block';
+      meta.innerHTML = `<div class="info-line"><span>Sınav Adı</span><div style="flex:1; text-align:right;">${config.examTitle}</div></div>
+                        <div class="info-line"><span>Tarih</span><div style="flex:1; text-align:right;">${new Date().toLocaleDateString()}</div></div>`;
+      header.appendChild(meta);
+      page.appendChild(header);
+
+      const body = document.createElement('div');
+      body.className = 'form-body';
+      const bubbleLayer = document.createElement('div');
+      bubbleLayer.className = 'bubble-layer';
+
+      // Öğrenci No görseli
+      if (config.studentId && config.studentId.bubbles.length) {
+        const xs = config.studentId.bubbles.map(b => b.x);
+        const ys = config.studentId.bubbles.map(b => b.y);
+        const minX = Math.min(...xs);
+        const minY = Math.min(...ys);
+        const label = document.createElement('div');
+        label.className = 'student-label';
+        label.textContent = 'Öğrenci No';
+        label.style.left = (minX * 100) + '%';
+        label.style.top = Math.max(0, (minY * 100) - 4) + '%';
+        bubbleLayer.appendChild(label);
+
+        const boxTop = Math.max(0, (minY * 100) - 2);
+        const seenCols = new Set();
+        // Her sütun için baloncukları grupla ve merkez x'i bul
+        const colCenters = {};
+        config.studentId.bubbles.forEach(b => {
+          if (!colCenters[b.col]) {
+            colCenters[b.col] = { x: b.x, width: b.width };
+          }
+        });
+        Object.keys(colCenters).forEach(col => {
+          const colInfo = colCenters[col];
+          const box = document.createElement('div');
+          box.className = 'student-box';
+          // Kutuyu baloncuk sütununun ortasına hizala
+          const centerX = colInfo.x + colInfo.width / 2;
+          box.style.left = (centerX * 100) + '%';
+          box.style.top = boxTop + '%';
+          box.style.transform = 'translateX(-50%)'; // Kutuyu kendi genişliğinin yarısı kadar sola kaydır
+          box.textContent = parseInt(col) + 1;
+          bubbleLayer.appendChild(box);
+        });
+
+        config.studentId.bubbles.forEach(b => {
+          const bubble = document.createElement('div');
+          bubble.className = 'bubble';
+          bubble.style.left = (b.x * 100) + '%';
+          bubble.style.top = (b.y * 100) + '%';
+          bubble.style.width = (b.width * 100) + '%';
+          bubble.style.height = (b.height * 100) + '%';
+          bubble.textContent = b.digit;
+          bubbleLayer.appendChild(bubble);
+        });
+      }
+
+      config.questions.forEach(q => {
+        const firstBubble = q.choices[0];
+        const yPx = q.choices[0].y * 100;
+        const label = document.createElement('div');
+        label.className = 'question-label';
+        label.textContent = q.questionNumber;
+        const labelOffsetX = config.questionNumberPosition === 'left'
+          ? firstBubble.x * 100 - 4
+          : (firstBubble.x * 100) + (q.choices.length * (q.choices[0].width + 0.002) * 100) + 2;
+        label.style.left = labelOffsetX + '%';
+        label.style.top = (yPx + 0.2) + '%';
+        bubbleLayer.appendChild(label);
+
+        q.choices.forEach(c => {
+          const bubble = document.createElement('div');
+          bubble.className = 'bubble';
+          bubble.style.left = (c.x * 100) + '%';
+          bubble.style.top = (c.y * 100) + '%';
+          bubble.style.width = (c.width * 100) + '%';
+          bubble.style.height = (c.height * 100) + '%';
+          bubble.textContent = c.option;
+          bubbleLayer.appendChild(bubble);
+        });
+      });
+
+      body.appendChild(document.createComment('content holder'));
+      page.appendChild(body);
+      page.appendChild(bubbleLayer);
+      container.appendChild(page);
+      renderQRCode(config);
+    }
+
+    function renderQRCode(config) {
+      const qrData = JSON.stringify({ examId: config.examId, generatedAt: config.generatedAt });
+      const qrBox = document.getElementById('qr-box');
+      if (!qrBox) return;
+      qrBox.innerHTML = '';
+      qrInstance = new QRCode(qrBox, { text: qrData, width: 120, height: 120, correctLevel: QRCode.CorrectLevel.M });
+    }
+
+    function generateAnswerKey(config) {
+      answerKey = {};
+      const letters = ['A','B','C','D','E'];
+      for (let i = 1; i <= config.questionCount; i++) answerKey[i] = letters[(i - 1) % config.choiceCount];
+    }
+
+    function clampInt(value, min, max, fallback) { const v = parseInt(value, 10); return Number.isNaN(v) ? fallback : Math.min(Math.max(v, min), max); }
+    function clampNumber(value, min, max, fallback) { const v = parseFloat(value); return Number.isNaN(v) ? fallback : Math.min(Math.max(v, min), max); }
+
+    // Kamera
+    async function initCamera() {
+      const logEl = document.getElementById('cameraLog');
+      try {
+        if (videoStream) return;
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        videoStream = stream;
+        const video = document.getElementById('video');
+        video.srcObject = stream;
+        await video.play();
+        logEl.textContent = 'Kamera hazır.';
+      } catch (err) {
+        console.error(err);
+        logEl.textContent = 'Kamera erişimi reddedildi, tarayıcı ayarlarını kontrol edin.';
+      }
+    }
+    function stopCamera() { if (videoStream) { videoStream.getTracks().forEach(t => t.stop()); videoStream = null; } }
+
+    function onCaptureFrame() {
+      if (!cvReady) { setOmrLog('OpenCV henüz hazır değil.'); return; }
+      const video = document.getElementById('video');
+      if (!video || video.readyState < 2) { setOmrLog('Kamera başlamadı.'); return; }
+      captureFrame(video);
+    }
+
+    function captureFrame(video) {
+      const MAX_WIDTH = 1280;
+      const canvas = document.getElementById('captureCanvas');
+      const ctx = canvas.getContext('2d');
+      const scale = Math.min(1, MAX_WIDTH / video.videoWidth);
+      const w = Math.floor(video.videoWidth * scale);
+      const h = Math.floor(video.videoHeight * scale);
+      canvas.width = w; canvas.height = h;
+      ctx.drawImage(video, 0, 0, w, h);
+      processFrame();
+    }
+
+    function processFrame() {
+      const src = cv.imread('captureCanvas');
+      if (src.empty()) { setOmrLog('Kare okunamadı.'); return; }
+      const gray = new cv.Mat(); cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+      const blurred = new cv.Mat(); cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
+      const edges = new cv.Mat(); cv.Canny(blurred, edges, 50, 150);
+      cv.imshow('edgesCanvas', edges);
+
+      const quad = detectFormContour(edges);
+      if (!quad) { setOmrLog('Form çerçevesi bulunamadı.'); cleanup(); return; }
+      const warped = warpToTopDownView(src, quad);
+      cv.imshow('warpCanvas', warped);
+
+      const result = analyzeBubbles(warped, layoutConfig);
+      renderResults(result);
+      cleanup();
+
+      function cleanup() { src.delete(); gray.delete(); blurred.delete(); edges.delete(); if (warped) warped.delete(); }
+    }
+
+    function detectFormContour(edgeMat) {
+      const contours = new cv.MatVector(); const hierarchy = new cv.Mat();
+      cv.findContours(edgeMat, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+      let maxArea = 0, best = null; const minArea = edgeMat.cols * edgeMat.rows * 0.1;
+      for (let i = 0; i < contours.size(); i++) {
+        const cnt = contours.get(i); const area = cv.contourArea(cnt); if (area < minArea) continue;
+        const peri = cv.arcLength(cnt, true); const approx = new cv.Mat(); cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
+        if (approx.rows === 4 && area > maxArea) { maxArea = area; best = approx; } else { approx.delete(); }
+      }
+      contours.delete(); hierarchy.delete();
+      return best ? reorderCorners(best) : null;
+    }
+
+    function reorderCorners(quadMat) {
+      const pts = [];
+      for (let i = 0; i < 4; i++) pts.push({ x: quadMat.data32S[i * 2], y: quadMat.data32S[i * 2 + 1] });
+      const sumSorted = [...pts].sort((a, b) => (a.x + a.y) - (b.x + b.y));
+      const diffSorted = [...pts].sort((a, b) => (a.y - a.x) - (b.y - b.x));
+      const tl = sumSorted[0], br = sumSorted[3], tr = diffSorted[0], bl = diffSorted[3];
+      quadMat.delete();
+      return [tl, tr, br, bl];
+    }
+
+    function warpToTopDownView(src, quadPoints) {
+      const dst = new cv.Mat();
+      const srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
+        quadPoints[0].x, quadPoints[0].y,
+        quadPoints[1].x, quadPoints[1].y,
+        quadPoints[2].x, quadPoints[2].y,
+        quadPoints[3].x, quadPoints[3].y
+      ]);
+      const dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
+        0, 0,
+        WARP_WIDTH - 1, 0,
+        WARP_WIDTH - 1, WARP_HEIGHT - 1,
+        0, WARP_HEIGHT - 1
+      ]);
+      const M = cv.getPerspectiveTransform(srcTri, dstTri);
+      cv.warpPerspective(src, dst, M, new cv.Size(WARP_WIDTH, WARP_HEIGHT), cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
+      srcTri.delete(); dstTri.delete(); M.delete();
+      return dst;
+    }
+
+    function analyzeBubbles(warpMat, config) {
+      const fillThreshold = clampNumber(document.getElementById('fillThreshold').value, 0, 1, 0.32);
+      const penalty = clampNumber(document.getElementById('penalty').value, 0, 1, 0.25);
+      const gray = new cv.Mat(); cv.cvtColor(warpMat, gray, cv.COLOR_RGBA2GRAY, 0);
+      const binary = new cv.Mat(); cv.threshold(gray, binary, 0, 255, cv.THRESH_BINARY_INV + cv.THRESH_OTSU);
+      const width = warpMat.cols, height = warpMat.rows;
+      const perQuestion = []; let correct = 0, wrong = 0, blank = 0, multi = 0;
+
+      for (const q of config.questions) {
+        const filled = [];
+        for (const c of q.choices) {
+          const rect = new cv.Rect(
+            Math.max(0, Math.round(c.x * width)),
+            Math.max(0, Math.round(c.y * height)),
+            Math.max(2, Math.round(c.width * width)),
+            Math.max(2, Math.round(c.height * height))
+          );
+          if (rect.x + rect.width > binary.cols || rect.y + rect.height > binary.rows) continue;
+          const roi = binary.roi(rect);
+          const nonZero = cv.countNonZero(roi);
+          const ratio = nonZero / (rect.width * rect.height);
+          if (ratio >= fillThreshold) filled.push({ option: c.option, ratio });
+          roi.delete();
+        }
+        let status = 'Boş'; let marked = filled.map(f => f.option);
+        if (filled.length === 0) { blank++; }
+        else if (filled.length > 1) { status = 'Çoklu işaret'; multi++; }
+        else {
+          const chosen = filled[0].option;
+          const key = answerKey[q.questionNumber];
+          if (key && key === chosen) { status = 'Doğru'; correct++; }
+          else if (key) { status = 'Yanlış'; wrong++; }
+          else { status = 'İşaretli'; }
+        }
+        perQuestion.push({ question: q.questionNumber, marked: marked.length ? marked.join(',') : '-', status });
+      }
+
+      const studentResult = readStudentId(binary, config.studentId, fillThreshold);
+      const net = (correct - wrong * penalty).toFixed(2);
+      gray.delete(); binary.delete();
+      return { correct, wrong, blank, multi, net, perQuestion, studentResult };
+    }
+
+    function readStudentId(binary, studentConfig, threshold) {
+      if (!studentConfig || !studentConfig.bubbles || !studentConfig.bubbles.length) return { value: '', note: 'Tanımsız' };
+      const width = binary.cols; const digits = [];
+      for (let col = 0; col < studentConfig.digits; col++) {
+        const colBubbles = studentConfig.bubbles.filter(b => b.col === col);
+        let bestDigit = null, bestRatio = 0;
+        for (const b of colBubbles) {
+          const rect = new cv.Rect(
+            Math.max(0, Math.round(b.x * width)),
+            Math.max(0, Math.round(b.y * binary.rows)),
+            Math.max(2, Math.round(b.width * width)),
+            Math.max(2, Math.round(b.height * binary.rows))
+          );
+          if (rect.x + rect.width > binary.cols || rect.y + rect.height > binary.rows) continue;
+          const roi = binary.roi(rect);
+          const nonZero = cv.countNonZero(roi);
+          const ratio = nonZero / (rect.width * rect.height);
+          if (ratio > bestRatio) { bestRatio = ratio; bestDigit = b.digit; }
+          roi.delete();
+        }
+        digits.push(bestRatio >= threshold ? String(bestDigit) : '-');
+      }
+      return { value: digits.join(''), note: 'En yüksek doluluk seçildi' };
+    }
+
+    function renderResults(result) {
+      const summary = `Doğru: ${result.correct} | Yanlış: ${result.wrong} | Boş: ${result.blank} | Çoklu: ${result.multi} | Net: ${result.net}`;
+      const studentLine = result.studentResult && result.studentResult.value ? `Öğrenci No: ${result.studentResult.value}` : 'Öğrenci No: -';
+      const lines = result.perQuestion.map(r => `${r.question}: ${r.marked} → ${r.status}`).join('<br>');
+      document.getElementById('omrResult').innerHTML = `<strong>${summary}</strong><br>${studentLine}<br>${lines}`;
+      setOmrLog('İşaretler değerlendirildi.');
+    }
+
+    function setOmrLog(msg) { document.getElementById('omrLog').textContent = msg; }
   </script>
 </body>
 </html>
