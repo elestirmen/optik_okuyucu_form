@@ -1094,13 +1094,14 @@
         if (maxScore < BLANK_GUARD) {
           blank++;
           perQuestion.push({ q: q.questionNumber, marked: '-', status: 'Boş', maxScore: maxScore.toFixed(2) });
-          return;
+          continue;
         }
 
         const filled = scores.filter(s => s.score >= threshold);
         
         let status = 'Boş';
-        let effectiveFilled = filled;
+        let candidate = null;
+        let markedLabel = '-';
         
         // Tek seçim için: en yüksek skor threshold'u geçmese bile,
         // belirgin şekilde diğerlerinden yüksekse al
@@ -1110,19 +1111,27 @@
           const second = sortedScores[1];
           // En yüksek, ikinciden en az %50 daha yüksekse
           if (best.score > second.score * 1.5 || (best.score > 0.1 && best.score > second.score * 1.3)) {
-            effectiveFilled = [best];
+            candidate = best;
           }
+        } else if (filled.length > 1) {
+          // Çoklu işaret varsa en yüksek skorlu seçeneği al
+          candidate = filled.reduce((a, b) => (a.score >= b.score ? a : b));
+          if (candidate) markedLabel = candidate.opt + '*';
+          multi++;
+        } else if (filled.length === 1) {
+          candidate = filled[0];
         }
         
-        if (effectiveFilled.length === 0) blank++;
-        else if (effectiveFilled.length > 1) { status = 'Çoklu'; multi++; }
-        else {
-          const chosen = effectiveFilled[0].opt;
+        if (candidate) {
           const key = answerKey[q.questionNumber];
-          if (key === chosen) { status = 'Doğru'; correct++; }
-          else { status = 'Yanlış'; wrong++; }
+          status = key === candidate.opt ? 'Doğru' : 'Yanlış';
+          if (markedLabel === '-') markedLabel = candidate.opt;
+          if (status === 'Doğru') correct++; else wrong++;
+        } else {
+          blank++;
         }
         
+        perQuestion.push({ q: q.questionNumber, marked: markedLabel, status, maxScore: maxScore.toFixed(2) });
         perQuestion.push({ q: q.questionNumber, marked: effectiveFilled.map(f => f.opt).join(',') || '-', status, maxScore: maxScore.toFixed(2) });
       }
       
