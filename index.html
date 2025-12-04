@@ -345,23 +345,52 @@
           </div>
           
           <div class="card">
-            <h3>📷 Kamera</h3>
-            <div class="hint">Formu hizalayın ve tarayın</div>
-            <div class="video-wrap">
-              <video id="video" playsinline></video>
-              <div class="overlay"></div>
-              <div class="scan-status" id="scanStatus"><div class="dot"></div><span id="scanStatusText">Bekleniyor</span></div>
+            <h3>📷 Form Okuma</h3>
+            <div class="hint">Kamera veya dosyadan resim yükleyerek formu okuyun</div>
+            
+            <div class="param-grid" style="margin-bottom:10px;">
+              <div>
+                <label>Kaynak</label>
+                <select id="scanSource">
+                  <option value="camera" selected>📷 Kamera</option>
+                  <option value="file">📁 Dosyadan Yükle</option>
+                </select>
+              </div>
             </div>
-            <div class="btn-group">
-              <button class="btn" id="startCameraBtn">📷 Başlat</button>
-              <button class="btn secondary" id="captureBtn" disabled>📸 Öğrenci Formu Tara</button>
-              <button class="btn secondary" id="autoScanBtn">🔄 Otomatik</button>
+            
+            <!-- Kamera Bölümü -->
+            <div id="cameraSection">
+              <div class="video-wrap">
+                <video id="video" playsinline></video>
+                <div class="overlay"></div>
+                <div class="scan-status" id="scanStatus"><div class="dot"></div><span id="scanStatusText">Bekleniyor</span></div>
+              </div>
+              <div class="btn-group">
+                <button class="btn" id="startCameraBtn">📷 Kamerayı Başlat</button>
+                <button class="btn secondary" id="captureBtn" disabled>📸 Öğrenci Formu Tara</button>
+                <button class="btn secondary" id="autoScanBtn">🔄 Otomatik</button>
+              </div>
             </div>
+            
+            <!-- Dosya Yükleme Bölümü -->
+            <div id="fileSection" style="display:none;">
+              <div style="border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;margin-bottom:10px;">
+                <input type="file" id="fileInput" accept="image/*" style="display:none;">
+                <button class="btn" onclick="document.getElementById('fileInput').click()">📁 Resim Seç</button>
+                <div class="hint" style="margin-top:8px;">PNG, JPG veya JPEG formatında form resmi yükleyin</div>
+                <div id="fileName" style="margin-top:8px;font-size:11px;color:var(--muted);"></div>
+              </div>
+              <div class="btn-group">
+                <button class="btn secondary" id="processFileBtn" disabled>🔍 Formu Analiz Et</button>
+                <button class="btn secondary" id="clearFileBtn" style="display:none;">🗑️ Temizle</button>
+              </div>
+            </div>
+            
             <div class="settings-row">
-              <label>Eşik: <input type="number" id="fillThreshold" value="0.28" min="0.1" max="0.9" step="0.02"></label>
+              <label>Eşik: <input type="number" id="fillThreshold" value="0.20" min="0.1" max="0.9" step="0.02"></label>
               <label>Ceza: <input type="number" id="penalty" value="0.25" min="0" max="1" step="0.05"></label>
             </div>
-            <div class="log" id="cameraLog">Kamerayı başlatın.</div>
+            <div class="log" id="cameraLog">Kaynak seçin ve formu yükleyin.</div>
           </div>
           
           <div class="card">
@@ -391,6 +420,12 @@
     // =====================================================
     // GLOBAL STATE
     // =====================================================
+    const MARKER_OFFSET = 5;
+    const MARKER_SIZE = 18;
+    const MARKER_INNER = 6;
+    const FILL_ROI_SCALE = 1.04; // Baloncuk ROI'sini hafif büyüt, gürültü kapma riskini azalt
+    const FILL_MASK_RATIO = 0.32; // ROI içinde ölçüm yapılacak iç daire oranı (çerçeveyi daha az say)
+    const BLANK_GUARD = 0.18; // max skor bunun altındaysa eşikten bağımsız olarak Boş kabul et
     let layoutConfig = null;
     let answerKey = {};
     let videoStream = null;
@@ -421,6 +456,12 @@
       document.getElementById('randomKeyBtn').addEventListener('click', generateRandomKey);
       document.getElementById('scanKeyBtn').addEventListener('click', startAnswerKeyScan);
       document.getElementById('answerKeyCount').addEventListener('change', generateAnswerKeyGrid);
+      
+      // Dosya yükleme event listener'ları
+      document.getElementById('scanSource').addEventListener('change', toggleScanSource);
+      document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+      document.getElementById('processFileBtn').addEventListener('click', processUploadedFile);
+      document.getElementById('clearFileBtn').addEventListener('click', clearUploadedFile);
     });
 
     function setupTabs() {
@@ -698,34 +739,50 @@
     }
 
     function drawCornerMarkers(ctx, w, h) {
-      const size = 18;
-      const offset = 5;
-      const inner = 6;
-      
       ctx.fillStyle = '#000';
       
       // Top-left
-      ctx.fillRect(offset, offset, size, size);
+      ctx.fillRect(MARKER_OFFSET, MARKER_OFFSET, MARKER_SIZE, MARKER_SIZE);
       ctx.fillStyle = '#fff';
-      ctx.fillRect(offset + size - inner, offset + size - inner, inner, inner);
+      ctx.fillRect(
+        MARKER_OFFSET + MARKER_SIZE - MARKER_INNER,
+        MARKER_OFFSET + MARKER_SIZE - MARKER_INNER,
+        MARKER_INNER,
+        MARKER_INNER
+      );
       
       // Top-right
       ctx.fillStyle = '#000';
-      ctx.fillRect(w - offset - size, offset, size, size);
+      ctx.fillRect(w - MARKER_OFFSET - MARKER_SIZE, MARKER_OFFSET, MARKER_SIZE, MARKER_SIZE);
       ctx.fillStyle = '#fff';
-      ctx.fillRect(w - offset - size, offset + size - inner, inner, inner);
+      ctx.fillRect(
+        w - MARKER_OFFSET - MARKER_SIZE,
+        MARKER_OFFSET + MARKER_SIZE - MARKER_INNER,
+        MARKER_INNER,
+        MARKER_INNER
+      );
       
       // Bottom-left
       ctx.fillStyle = '#000';
-      ctx.fillRect(offset, h - offset - size, size, size);
+      ctx.fillRect(MARKER_OFFSET, h - MARKER_OFFSET - MARKER_SIZE, MARKER_SIZE, MARKER_SIZE);
       ctx.fillStyle = '#fff';
-      ctx.fillRect(offset + size - inner, h - offset - size, inner, inner);
+      ctx.fillRect(
+        MARKER_OFFSET + MARKER_SIZE - MARKER_INNER,
+        h - MARKER_OFFSET - MARKER_SIZE,
+        MARKER_INNER,
+        MARKER_INNER
+      );
       
       // Bottom-right
       ctx.fillStyle = '#000';
-      ctx.fillRect(w - offset - size, h - offset - size, size, size);
+      ctx.fillRect(w - MARKER_OFFSET - MARKER_SIZE, h - MARKER_OFFSET - MARKER_SIZE, MARKER_SIZE, MARKER_SIZE);
       ctx.fillStyle = '#fff';
-      ctx.fillRect(w - offset - size, h - offset - size, inner, inner);
+      ctx.fillRect(
+        w - MARKER_OFFSET - MARKER_SIZE,
+        h - MARKER_OFFSET - MARKER_SIZE,
+        MARKER_INNER,
+        MARKER_INNER
+      );
     }
 
     function drawBubble(ctx, x, y, r) {
@@ -932,22 +989,28 @@
       });
       
       return {
-        tl: { x: tl.rect.x + tl.rect.width, y: tl.rect.y + tl.rect.height },
-        tr: { x: tr.rect.x, y: tr.rect.y + tr.rect.height },
-        bl: { x: bl.rect.x + bl.rect.width, y: bl.rect.y },
-        br: { x: br.rect.x, y: br.rect.y }
+        tl: tl.center,
+        tr: tr.center,
+        bl: bl.center,
+        br: br.center
       };
     }
 
     function warpPerspective(src, markers) {
       const W = layoutConfig.canvasWidth || 600;
       const H = layoutConfig.canvasHeight || 900;
+      const markerCenter = MARKER_OFFSET + MARKER_SIZE / 2;
       
       const srcPts = cv.matFromArray(4, 1, cv.CV_32FC2, [
         markers.tl.x, markers.tl.y, markers.tr.x, markers.tr.y,
         markers.br.x, markers.br.y, markers.bl.x, markers.bl.y
       ]);
-      const dstPts = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, W, 0, W, H, 0, H]);
+      const dstPts = cv.matFromArray(4, 1, cv.CV_32FC2, [
+        markerCenter, markerCenter,
+        W - markerCenter, markerCenter,
+        W - markerCenter, H - markerCenter,
+        markerCenter, H - markerCenter
+      ]);
       const M = cv.getPerspectiveTransform(srcPts, dstPts);
       const dst = new cv.Mat();
       cv.warpPerspective(src, dst, M, new cv.Size(W, H));
@@ -955,45 +1018,118 @@
       return dst;
     }
 
-    function analyzeBubbles(warpMat) {
-      const threshold = parseFloat(document.getElementById('fillThreshold').value) || 0.28;
+    function analyzeBubbles(warpMat, debugDraw = true) {
+      const threshold = parseFloat(document.getElementById('fillThreshold').value) || 0.20;
       const penalty = parseFloat(document.getElementById('penalty').value) || 0.25;
       
       const gray = new cv.Mat(); cv.cvtColor(warpMat, gray, cv.COLOR_RGBA2GRAY);
-      const binary = new cv.Mat(); cv.adaptiveThreshold(gray, binary, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 15, 4);
+      // Daha küçük blok ve düşük C: lekeler/parlamalar daha az doldurulur
+      const binary = new cv.Mat(); cv.adaptiveThreshold(gray, binary, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 11, 2);
       
       const w = warpMat.cols, h = warpMat.rows;
       let correct = 0, wrong = 0, blank = 0, multi = 0;
       const perQuestion = [];
       
+      // Debug: ROI'leri çizmek için warpMat'in kopyasını al
+      let debugMat = null;
+      if (debugDraw) {
+        debugMat = warpMat.clone();
+      }
+      
+      console.log(`Warp boyutu: ${w}x${h}, Layout boyutu: ${layoutConfig.canvasWidth}x${layoutConfig.canvasHeight}`);
+      console.log(`Toplam soru: ${layoutConfig.questions.length}`);
+      
       for (const q of layoutConfig.questions) {
         const scores = q.choices.map(c => {
-          const rect = new cv.Rect(
-            Math.max(0, Math.round(c.x * w - c.width * w / 2)),
-            Math.max(0, Math.round(c.y * h - c.height * h / 2)),
-            Math.round(c.width * w),
-            Math.round(c.height * h)
-          );
-          if (rect.x + rect.width > w || rect.y + rect.height > h) return { opt: c.option, score: 0 };
+          // ROI boyutlarını hesapla
+          const roiW = Math.round(c.width * w * FILL_ROI_SCALE);
+          const roiH = Math.round(c.height * h * FILL_ROI_SCALE);
+          
+          // Merkez koordinatlarından sol üst köşeyi hesapla
+          const rectX = Math.max(0, Math.round(c.x * w - roiW / 2));
+          const rectY = Math.max(0, Math.round(c.y * h - roiH / 2));
+          
+          const rect = new cv.Rect(rectX, rectY, roiW, roiH);
+          
+          // Sınır kontrolü
+          if (rect.x + rect.width > w) rect.width = w - rect.x;
+          if (rect.y + rect.height > h) rect.height = h - rect.y;
+          if (rect.width <= 0 || rect.height <= 0) return { opt: c.option, score: 0 };
+          
+          // Debug: ROI'yi çiz
+          if (debugMat && q.questionNumber <= 5) {
+            const color = new cv.Scalar(0, 255, 0, 255); // Yeşil
+            cv.rectangle(debugMat, new cv.Point(rect.x, rect.y), 
+                        new cv.Point(rect.x + rect.width, rect.y + rect.height), color, 1);
+          }
+          
           const roi = binary.roi(rect);
-          const score = cv.countNonZero(roi) / (rect.width * rect.height);
+          let score = 0;
+          // Dairesel maske ile i? b?lgeyi oku (?er?eve ?izgisini hari? tut)
+          if (roi.rows > 0 && roi.cols > 0) {
+            const mask = new cv.Mat.zeros(roi.rows, roi.cols, cv.CV_8UC1);
+            const r = Math.floor(Math.min(roi.rows, roi.cols) * FILL_MASK_RATIO);
+            const cx = Math.floor(roi.cols / 2);
+            const cy = Math.floor(roi.rows / 2);
+            cv.circle(mask, new cv.Point(cx, cy), r, new cv.Scalar(255, 255, 255, 255), -1);
+            const masked = new cv.Mat();
+            cv.bitwise_and(roi, mask, masked);
+            const maskArea = cv.countNonZero(mask);
+            score = maskArea > 0 ? cv.countNonZero(masked) / maskArea : 0;
+            masked.delete(); mask.delete();
+          }
           roi.delete();
+          
+          // Debug log for first question
+          if (q.questionNumber === 1) {
+            console.log(`S1 ${c.option}: rect(${rect.x},${rect.y},${rect.width},${rect.height}) score=${score.toFixed(3)}`);
+          }
+          
           return { opt: c.option, score };
         });
         
+        // En yüksek skora sahip olanı bul
+        const maxScore = Math.max(...scores.map(s => s.score));
+        // Gürültü alt sınırı: max skor çok düşükse doğrudan boş kabul et
+        if (maxScore < BLANK_GUARD) {
+          blank++;
+          perQuestion.push({ q: q.questionNumber, marked: '-', status: 'Boş', maxScore: maxScore.toFixed(2) });
+          return;
+        }
+
         const filled = scores.filter(s => s.score >= threshold);
-        let status = 'Boş';
         
-        if (filled.length === 0) blank++;
-        else if (filled.length > 1) { status = 'Çoklu'; multi++; }
+        let status = 'Boş';
+        let effectiveFilled = filled;
+        
+        // Tek seçim için: en yüksek skor threshold'u geçmese bile,
+        // belirgin şekilde diğerlerinden yüksekse al
+        if (filled.length === 0 && maxScore > 0.05) {
+          const sortedScores = [...scores].sort((a, b) => b.score - a.score);
+          const best = sortedScores[0];
+          const second = sortedScores[1];
+          // En yüksek, ikinciden en az %50 daha yüksekse
+          if (best.score > second.score * 1.5 || (best.score > 0.1 && best.score > second.score * 1.3)) {
+            effectiveFilled = [best];
+          }
+        }
+        
+        if (effectiveFilled.length === 0) blank++;
+        else if (effectiveFilled.length > 1) { status = 'Çoklu'; multi++; }
         else {
-          const chosen = filled[0].opt;
+          const chosen = effectiveFilled[0].opt;
           const key = answerKey[q.questionNumber];
           if (key === chosen) { status = 'Doğru'; correct++; }
           else { status = 'Yanlış'; wrong++; }
         }
         
-        perQuestion.push({ q: q.questionNumber, marked: filled.map(f => f.opt).join(',') || '-', status });
+        perQuestion.push({ q: q.questionNumber, marked: effectiveFilled.map(f => f.opt).join(',') || '-', status, maxScore: maxScore.toFixed(2) });
+      }
+      
+      // Debug görüntüsünü göster
+      if (debugMat) {
+        cv.imshow('warpCanvas', debugMat);
+        debugMat.delete();
       }
       
       // Read student ID
@@ -1032,8 +1168,9 @@
       
       let html = r.studentNo ? `<div style="margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:6px;"><b>Öğrenci No:</b> ${r.studentNo}</div>` : '';
       html += r.perQuestion.map(p => {
-        const color = p.status === 'Doğru' ? '#10b981' : p.status === 'Yanlış' ? '#ef4444' : '#666';
-        return `<div><span style="width:25px;display:inline-block;text-align:right;">${p.q}.</span> ${p.marked} <span style="color:${color}">${p.status}</span></div>`;
+        const color = p.status === 'Doğru' ? '#10b981' : p.status === 'Yanlış' ? '#ef4444' : p.status === 'Boş' ? '#666' : '#f59e0b';
+        const scoreInfo = p.maxScore ? ` <span style="color:#666;font-size:9px;">(${p.maxScore})</span>` : '';
+        return `<div><span style="width:25px;display:inline-block;text-align:right;">${p.q}.</span> ${p.marked}${scoreInfo} <span style="color:${color}">${p.status}</span></div>`;
       }).join('');
       
       document.getElementById('resultDetails').innerHTML = html;
@@ -1124,8 +1261,14 @@
     
     function startAnswerKeyScan() {
       scanMode = 'answerKey';
-      document.getElementById('captureBtn').textContent = '📷 Cevap Anahtarı Tara';
-      setLog('cameraLog', '📋 Cevap anahtarı formunu tarayın...', 'success');
+      const source = document.getElementById('scanSource').value;
+      if (source === 'camera') {
+        document.getElementById('captureBtn').textContent = '📷 Cevap Anahtarı Tara';
+        setLog('cameraLog', '📋 Cevap anahtarı formunu tarayın...', 'success');
+      } else {
+        document.getElementById('processFileBtn').textContent = '🔑 Cevap Anahtarı Analiz Et';
+        setLog('cameraLog', '📋 Cevap anahtarı resmini yükleyin ve analiz edin...', 'success');
+      }
       updateStatus('ready', 'Anahtar Tarama');
     }
     
@@ -1208,36 +1351,282 @@
       const answers = {};
       let successCount = 0;
       
+      // ROI boyut çarpanı
+      const roiScale = 1.3;
+      
       for (const q of layoutConfig.questions) {
         const scores = q.choices.map(c => {
+          const roiW = Math.round(c.width * w * roiScale);
+          const roiH = Math.round(c.height * h * roiScale);
+          
           const rect = new cv.Rect(
-            Math.max(0, Math.round(c.x * w - c.width * w / 2)),
-            Math.max(0, Math.round(c.y * h - c.height * h / 2)),
-            Math.round(c.width * w),
-            Math.round(c.height * h)
+            Math.max(0, Math.round(c.x * w - roiW / 2)),
+            Math.max(0, Math.round(c.y * h - roiH / 2)),
+            roiW,
+            roiH
           );
-          if (rect.x + rect.width > w || rect.y + rect.height > h) return { opt: c.option, score: 0 };
+          
+          // Sınır kontrolü
+          if (rect.x + rect.width > w) rect.width = w - rect.x;
+          if (rect.y + rect.height > h) rect.height = h - rect.y;
+          if (rect.width <= 0 || rect.height <= 0) return { opt: c.option, score: 0 };
+          
           const roi = binary.roi(rect);
-          const score = cv.countNonZero(roi) / (rect.width * rect.height);
+          let score = 0;
+          // Dairesel maske ile i? b?lgeyi oku (?er?eve ?izgisini hari? tut)
+          if (roi.rows > 0 && roi.cols > 0) {
+            const mask = new cv.Mat.zeros(roi.rows, roi.cols, cv.CV_8UC1);
+            const r = Math.floor(Math.min(roi.rows, roi.cols) * FILL_MASK_RATIO);
+            const cx = Math.floor(roi.cols / 2);
+            const cy = Math.floor(roi.rows / 2);
+            cv.circle(mask, new cv.Point(cx, cy), r, new cv.Scalar(255, 255, 255, 255), -1);
+            const masked = new cv.Mat();
+            cv.bitwise_and(roi, mask, masked);
+            const maskArea = cv.countNonZero(mask);
+            score = maskArea > 0 ? cv.countNonZero(masked) / maskArea : 0;
+            masked.delete(); mask.delete();
+          }
           roi.delete();
           return { opt: c.option, score };
         });
         
+        // En yüksek skora sahip şıkkı bul
+        const maxScore = Math.max(...scores.map(s => s.score));
         const filled = scores.filter(s => s.score >= threshold);
         
+        // Tek işaretli cevap varsa al
         if (filled.length === 1) {
           answers[q.questionNumber] = filled[0].opt;
           successCount++;
+        } 
+        // Hiçbiri threshold'u geçmiyorsa ama belirgin bir işaret varsa
+        else if (filled.length === 0 && maxScore >= threshold * 0.6) {
+          const best = scores.find(s => s.score === maxScore);
+          // Diğerlerinden belirgin şekilde yüksek olmalı
+          const secondMax = Math.max(...scores.filter(s => s.score !== maxScore).map(s => s.score));
+          if (best && maxScore > secondMax * 1.5) {
+            answers[q.questionNumber] = best.opt;
+            successCount++;
+          }
         }
       }
       
       gray.delete(); binary.delete();
+      
+      console.log(`Cevap anahtarı okuma: ${successCount}/${layoutConfig.questions.length} başarılı`);
       
       return {
         success: successCount > 0,
         answers: answers,
         count: successCount
       };
+    }
+
+    // =====================================================
+    // DOSYA YÜKLEME FONKSİYONLARI
+    // =====================================================
+    
+    let uploadedImage = null;
+    
+    function toggleScanSource() {
+      const source = document.getElementById('scanSource').value;
+      document.getElementById('cameraSection').style.display = source === 'camera' ? 'block' : 'none';
+      document.getElementById('fileSection').style.display = source === 'file' ? 'block' : 'none';
+      
+      // Scan mode'u sıfırla
+      scanMode = 'student';
+      document.getElementById('processFileBtn').textContent = '🔍 Formu Analiz Et';
+      
+      if (source === 'camera') {
+        initCamera();
+      } else {
+        stopCamera();
+        setLog('cameraLog', '📁 Dosya yükleme modu aktif. Resim seçin.', 'info');
+      }
+    }
+    
+    function handleFileSelect(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      
+      if (!file.type.match('image.*')) {
+        setLog('cameraLog', '❌ Lütfen bir resim dosyası seçin (PNG, JPG, JPEG)', 'error');
+        return;
+      }
+      
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          uploadedImage = img;
+          
+          // Resmi captureCanvas'a çiz
+          const canvas = document.getElementById('captureCanvas');
+          const ctx = canvas.getContext('2d');
+          
+          // Canvas boyutunu resme göre ayarla (max 1280px genişlik)
+          const maxWidth = 1280;
+          const scale = Math.min(1, maxWidth / img.width);
+          canvas.width = Math.floor(img.width * scale);
+          canvas.height = Math.floor(img.height * scale);
+          
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          
+          // Dosya adını göster
+          document.getElementById('fileName').textContent = `✓ ${file.name} (${Math.round(file.size/1024)} KB)`;
+          document.getElementById('processFileBtn').disabled = false;
+          document.getElementById('clearFileBtn').style.display = 'inline-flex';
+          
+          setLog('cameraLog', `✅ Resim yüklendi: ${file.name}`, 'success');
+          updateStatus('ready', 'Resim hazır');
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+    
+    function processUploadedFile() {
+      if (!uploadedImage || !cvReady) {
+        setLog('cameraLog', '⚠️ Önce bir resim yükleyin ve OpenCV hazır olsun.', 'error');
+        return;
+      }
+      
+      if (!layoutConfig || !layoutConfig.questions || layoutConfig.questions.length === 0) {
+        setLog('cameraLog', '⚠️ Önce form tasarımını oluşturun (Tasarla sekmesi).', 'error');
+        return;
+      }
+      
+      setLog('cameraLog', '🔍 Resim analiz ediliyor...', 'info');
+      updateStatus('scanning', 'Analiz ediliyor...');
+      
+      // captureCanvas'daki resmi işle
+      if (scanMode === 'answerKey') {
+        processAnswerKeyFromFile();
+        // Normal moda geri dön
+        scanMode = 'student';
+        document.getElementById('processFileBtn').textContent = '🔍 Formu Analiz Et';
+      } else {
+        processStudentFormFromFile();
+      }
+    }
+    
+    function processStudentFormFromFile() {
+      let src, gray, blurred, binary, markerOverlay;
+      
+      try {
+        src = cv.imread('captureCanvas');
+        if (src.empty()) {
+          throw new Error('Resim okunamadı');
+        }
+        
+        gray = new cv.Mat();
+        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+        blurred = new cv.Mat();
+        cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
+        binary = new cv.Mat();
+        cv.adaptiveThreshold(blurred, binary, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 11, 2);
+        
+        markerOverlay = src.clone();
+        const markers = detectCornerMarkers(binary, markerOverlay);
+        cv.imshow('markerCanvas', markerOverlay);
+        
+        if (!markers) {
+          setLog('cameraLog', '⚠️ Köşe markerları bulunamadı. Formun köşeleri görünür olmalı.', 'error');
+          updateStatus('error', 'Marker bulunamadı');
+          return;
+        }
+        
+        const warped = warpPerspective(src, markers);
+        cv.imshow('warpCanvas', warped);
+        
+        const result = analyzeBubbles(warped);
+        renderResults(result);
+        
+        updateStatus('found', '✓ Form okundu!');
+        setLog('cameraLog', '✅ Analiz tamamlandı!', 'success');
+        
+        warped.delete();
+      } catch (e) {
+        console.error(e);
+        setLog('cameraLog', '❌ Hata: ' + e.message, 'error');
+        updateStatus('error', 'Hata');
+      } finally {
+        if (src) src.delete();
+        if (gray) gray.delete();
+        if (blurred) blurred.delete();
+        if (binary) binary.delete();
+        if (markerOverlay) markerOverlay.delete();
+      }
+    }
+    
+    function processAnswerKeyFromFile() {
+      let src, gray, blurred, binary, markerOverlay;
+      
+      try {
+        src = cv.imread('captureCanvas');
+        gray = new cv.Mat();
+        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
+        blurred = new cv.Mat();
+        cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
+        binary = new cv.Mat();
+        cv.adaptiveThreshold(blurred, binary, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 11, 2);
+        
+        markerOverlay = src.clone();
+        const markers = detectCornerMarkers(binary, markerOverlay);
+        cv.imshow('markerCanvas', markerOverlay);
+        
+        if (!markers) {
+          setLog('cameraLog', '⚠️ Köşe markerları bulunamadı', 'error');
+          return;
+        }
+        
+        const warped = warpPerspective(src, markers);
+        cv.imshow('warpCanvas', warped);
+        
+        const result = readAnswerKeyFromScan(warped);
+        
+        if (result.success) {
+          answerKey = result.answers;
+          generateAnswerKeyGrid();
+          updateAnswerKeyStatus();
+          
+          scanMode = 'student';
+          document.getElementById('captureBtn').textContent = '📸 Öğrenci Formu Tara';
+          setLog('cameraLog', `✅ Cevap anahtarı yüklendi! ${Object.keys(answerKey).length} cevap okundu.`, 'success');
+          updateStatus('ready', '✓ Anahtar Yüklendi');
+        } else {
+          setLog('cameraLog', '⚠️ Cevap anahtarı okunamadı, tekrar deneyin', 'error');
+        }
+        
+        warped.delete();
+      } catch (e) {
+        setLog('cameraLog', 'Hata: ' + e.message, 'error');
+      } finally {
+        if (src) src.delete();
+        if (gray) gray.delete();
+        if (blurred) blurred.delete();
+        if (binary) binary.delete();
+        if (markerOverlay) markerOverlay.delete();
+      }
+    }
+    
+    function clearUploadedFile() {
+      uploadedImage = null;
+      document.getElementById('fileInput').value = '';
+      document.getElementById('fileName').textContent = '';
+      document.getElementById('processFileBtn').disabled = true;
+      document.getElementById('clearFileBtn').style.display = 'none';
+      
+      // Canvas'ları temizle
+      const canvases = ['captureCanvas', 'markerCanvas', 'warpCanvas'];
+      canvases.forEach(id => {
+        const canvas = document.getElementById(id);
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      });
+      
+      setLog('cameraLog', '🗑️ Yüklenen resim temizlendi', 'info');
+      updateStatus('ready', 'Hazır');
     }
   </script>
 </body>
