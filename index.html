@@ -7,6 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     :root {
       --bg: #0a0e1a;
@@ -98,7 +99,8 @@
     
     /* ===== CAMERA & READER ===== */
     .video-wrap { position: relative; background: #000; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-    video { width: 100%; display: block; max-height: 320px; object-fit: cover; }
+    video { width: 100%; height: auto; display: block; object-fit: contain; background: #000; }
+    canvas.live-overlay { position: absolute; inset: 0; pointer-events: none; }
     .overlay { 
       position: absolute; inset: 12px; border: 2px dashed rgba(6, 182, 212, 0.6); border-radius: 8px;
       pointer-events: none; box-shadow: 0 0 0 999px rgba(0,0,0,0.4);
@@ -204,7 +206,6 @@
     }
   </style>
   
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   
@@ -281,7 +282,6 @@
             
             <div class="param-grid" style="margin-top:8px;">
               <div><label>Sınav Kodu</label><input type="text" id="examId" value="SINAV-001"></div>
-              <div><label>Web Adresi</label><input type="text" id="webUrl" value="optikform.com"></div>
             </div>
             
             <div class="btn-group">
@@ -357,12 +357,19 @@
                   <option value="file">📁 Dosyadan Yükle</option>
                 </select>
               </div>
+              <div>
+                <label>Kamera Seçimi</label>
+                <select id="cameraSelect" disabled>
+                  <option>Algılanıyor...</option>
+                </select>
+              </div>
             </div>
             
             <!-- Kamera Bölümü -->
             <div id="cameraSection">
               <div class="video-wrap">
                 <video id="video" playsinline></video>
+                <canvas id="liveOverlay" class="live-overlay"></canvas>
                 <div class="overlay"></div>
                 <div class="scan-status" id="scanStatus"><div class="dot"></div><span id="scanStatusText">Bekleniyor</span></div>
               </div>
@@ -429,18 +436,20 @@
     // GLOBAL STATE
     // =====================================================
     const MARKER_OFFSET = 5;
-    const MARKER_SIZE = 18;
-    const MARKER_INNER = 6;
+    const MARKER_SIZE = 28; // Daha iri markerlar
+    const MARKER_INNER = 12; // İçte beyaz kare
+    const MARKER_CORE = 6; // Ortada siyah çekirdek
     const FILL_ROI_SCALE = 1.04; // Baloncuk ROI'sini hafif büyüt, gürültü kapma riskini azalt
     const FILL_MASK_RATIO = 0.32; // ROI içinde ölçüm yapılacak iç daire oranı (çerçeveyi daha az say)
     const BLANK_GUARD = 0.18; // max skor bunun altındaysa eşikten bağımsız olarak Boş kabul et
+    const QR_SIGNATURE_VERSION = 1;
     const sessionResults = [];
     let saveDirHandle = null;
     let logFileHandle = null;
     const LOG_FILE_NAME = 'session-log.txt';
     const fileSaveSupported = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
-    let saveDirHandle = null;
-    const fileSaveSupported = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
+    let availableCameras = [];
+    let currentDeviceId = '';
     let layoutConfig = null;
     let answerKey = {};
     let videoStream = null;
@@ -463,6 +472,8 @@
       document.getElementById('startCameraBtn').addEventListener('click', initCamera);
       document.getElementById('captureBtn').addEventListener('click', () => captureAndProcess());
       document.getElementById('autoScanBtn').addEventListener('click', toggleAutoScan);
+      const camSelect = document.getElementById('cameraSelect');
+      if (camSelect) camSelect.addEventListener('change', () => { stopCamera(); initCamera(true); });
       document.getElementById('downloadTxtBtn').addEventListener('click', downloadSessionTxt);
       document.getElementById('downloadCsvBtn').addEventListener('click', downloadSessionCsv);
       document.getElementById('downloadXlsxBtn').addEventListener('click', downloadSessionXlsx);
@@ -483,6 +494,8 @@
       document.getElementById('clearFileBtn').addEventListener('click', clearUploadedFile);
       
       renderSessionList();
+      loadCameras();
+      window.addEventListener('resize', debounce(adjustVideoLayout, 150));
     });
 
     function setupTabs() {
@@ -499,7 +512,7 @@
 
     function setupInputs() {
       const ids = ['questionCount', 'choiceCount', 'columnCount', 'studentDigits', 'showAnswerKey', 
-                   'answerKeyChoices', 'formWidth', 'formHeight', 'bubbleSize', 'rowGap', 'examId', 'webUrl',
+                   'answerKeyChoices', 'formWidth', 'formHeight', 'bubbleSize', 'rowGap', 'examId',
                    'qualityScale', 'headerRepeat'];
       ids.forEach(id => {
           const el = document.getElementById(id);
@@ -540,8 +553,7 @@
         rowGap: clampInt(document.getElementById('rowGap').value, 1, 20, 4),
         qualityScale: clampInt(document.getElementById('qualityScale').value, 1, 4, 2),
         headerRepeat: clampInt(document.getElementById('headerRepeat').value, 3, 20, 5),
-        examId: document.getElementById('examId').value || 'SINAV-001',
-        webUrl: document.getElementById('webUrl').value || ''
+        examId: document.getElementById('examId').value || 'SINAV-001'
       };
     }
 
@@ -551,46 +563,52 @@
       
       // Yüksek kalite için ölçek faktörü (kullanıcı ayarlı)
       const scale = cfg.qualityScale;
+      const contentHeight = cfg.formHeight;
+      const qrSize = 64;
+      const qrBand = qrSize + 24; // QR için ayrı bant
+      const totalHeight = contentHeight + qrBand;
       canvas.width = cfg.formWidth * scale;
-      canvas.height = cfg.formHeight * scale;
+      canvas.height = totalHeight * scale;
       canvas.style.width = cfg.formWidth + 'px';
-      canvas.style.height = cfg.formHeight + 'px';
+      canvas.style.height = totalHeight + 'px';
       ctx.scale(scale, scale);
       
       // Background
       ctx.fillStyle = '#fff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       
+      // QR bandı üstte, içerikten ayrı
+      const qrX = cfg.formWidth / 2 - qrSize / 2;
+      const qrY = (qrBand - qrSize) / 2;
+      const qrPayload = buildQrPayload(cfg);
+      drawQRCode(ctx, qrX, qrY, qrSize, qrPayload);
+      ctx.fillStyle = '#000';
+      ctx.font = '8px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('Doğrulama', qrX + qrSize / 2, qrY + qrSize + 10);
+      
+      // İçerik alanını qrBand kadar aşağı kaydır
+      ctx.save();
+      ctx.translate(0, qrBand);
+      
       // Border
       ctx.strokeStyle = '#000';
       ctx.lineWidth = 2;
-      ctx.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
+      ctx.strokeRect(1, 1, cfg.formWidth - 2, contentHeight - 2);
       
       // Corner markers
-      // Not: ctx.scale() uygulandığı için orijinal boyutları kullan
-      drawCornerMarkers(ctx, cfg.formWidth, cfg.formHeight);
+      drawCornerMarkers(ctx, cfg.formWidth, contentHeight);
       
-      const margin = 15;
+      // Markerların üzerine yazı gelmemesi için sol/üst boşluk marker boyutuna göre ayarlandı
+      const margin = Math.max(15, MARKER_OFFSET + MARKER_SIZE + 10);
       const bubbleR = cfg.bubbleSize / 2;
       const bubbleGap = cfg.bubbleSize + 3;
       const rowH = cfg.bubbleSize + cfg.rowGap;
       
       let y = margin + 10;
       
-      // === HEADER: QR + Öğrenci No + Anahtar ===
-      const qrSize = 60;
-      
-      // QR Code
-      drawQRCode(ctx, margin, y, qrSize, cfg.examId);
-      
-      // Web URL under QR
-      ctx.fillStyle = '#000';
-      ctx.font = '8px Inter, sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText(cfg.webUrl, margin + qrSize/2, y + qrSize + 10);
-      
-      // === Öğrenci No Section ===
-      const studentStartX = margin + qrSize + 15;
+      // === HEADER: Öğrenci No + Anahtar ===
+      const studentStartX = margin;
       const studentStartY = y;
       
       ctx.font = 'bold 9px Inter, sans-serif';
@@ -685,9 +703,9 @@
       for (let row = 0; row < 10; row++) {
         for (let col = 0; col < cfg.studentDigits; col++) {
           const bx = (studentStartX + col * digitGap + digitBubbleR) / cfg.formWidth;
-          const by = (studentStartY + 20 + row * (digitBubbleSize + 2) + digitBubbleR) / cfg.formHeight;
+          const by = (qrBand + studentStartY + 20 + row * (digitBubbleSize + 2) + digitBubbleR) / totalHeight;
           layoutConfig.studentId.bubbles.push({
-            digit: row, col, x: bx, y: by, width: digitBubbleSize / cfg.formWidth, height: digitBubbleSize / cfg.formHeight
+            digit: row, col, x: bx, y: by, width: digitBubbleSize / cfg.formWidth, height: digitBubbleSize / totalHeight
           });
         }
       }
@@ -738,72 +756,47 @@
           // Choice bubbles
           const choices = [];
           for (let c = 0; c < cfg.choiceCount; c++) {
-            const bx = labelStartX + c * bubbleGap;
-            drawBubble(ctx, bx, qY + bubbleR, bubbleR - 1);
+              const bx = labelStartX + c * bubbleGap;
+              drawBubble(ctx, bx, qY + bubbleR, bubbleR - 1);
+              
+              choices.push({
+                option: letters[c],
+                x: bx / cfg.formWidth,
+                y: (qrBand + qY + bubbleR) / totalHeight,
+                width: cfg.bubbleSize / cfg.formWidth,
+                height: cfg.bubbleSize / totalHeight
+              });
+            }
             
-            choices.push({
-              option: letters[c],
-              x: bx / cfg.formWidth,
-              y: (qY + bubbleR) / cfg.formHeight,
-              width: cfg.bubbleSize / cfg.formWidth,
-              height: cfg.bubbleSize / cfg.formHeight
-            });
+            layoutConfig.questions.push({ questionNumber: qNum, choices });
           }
-          
-          layoutConfig.questions.push({ questionNumber: qNum, choices });
         }
+        
+        // Store dimensions for OMR (orijinal boyutlar, scale'siz)
+        layoutConfig.canvasWidth = cfg.formWidth;
+        layoutConfig.canvasHeight = totalHeight;
+        layoutConfig.qrBand = qrBand;
+      ctx.restore();
       }
-      
-      // Store dimensions for OMR (orijinal boyutlar, scale'siz)
-      layoutConfig.canvasWidth = cfg.formWidth;
-      layoutConfig.canvasHeight = cfg.formHeight;
-    }
 
     function drawCornerMarkers(ctx, w, h) {
-      ctx.fillStyle = '#000';
-      
-      // Top-left
-      ctx.fillRect(MARKER_OFFSET, MARKER_OFFSET, MARKER_SIZE, MARKER_SIZE);
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(
-        MARKER_OFFSET + MARKER_SIZE - MARKER_INNER,
-        MARKER_OFFSET + MARKER_SIZE - MARKER_INNER,
-        MARKER_INNER,
-        MARKER_INNER
-      );
-      
-      // Top-right
-      ctx.fillStyle = '#000';
-      ctx.fillRect(w - MARKER_OFFSET - MARKER_SIZE, MARKER_OFFSET, MARKER_SIZE, MARKER_SIZE);
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(
-        w - MARKER_OFFSET - MARKER_SIZE,
-        MARKER_OFFSET + MARKER_SIZE - MARKER_INNER,
-        MARKER_INNER,
-        MARKER_INNER
-      );
-      
-      // Bottom-left
-      ctx.fillStyle = '#000';
-      ctx.fillRect(MARKER_OFFSET, h - MARKER_OFFSET - MARKER_SIZE, MARKER_SIZE, MARKER_SIZE);
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(
-        MARKER_OFFSET + MARKER_SIZE - MARKER_INNER,
-        h - MARKER_OFFSET - MARKER_SIZE,
-        MARKER_INNER,
-        MARKER_INNER
-      );
-      
-      // Bottom-right
-      ctx.fillStyle = '#000';
-      ctx.fillRect(w - MARKER_OFFSET - MARKER_SIZE, h - MARKER_OFFSET - MARKER_SIZE, MARKER_SIZE, MARKER_SIZE);
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(
-        w - MARKER_OFFSET - MARKER_SIZE,
-        h - MARKER_OFFSET - MARKER_SIZE,
-        MARKER_INNER,
-        MARKER_INNER
-      );
+      const centers = [
+        { x: MARKER_OFFSET + MARKER_SIZE / 2, y: MARKER_OFFSET + MARKER_SIZE / 2 }, // TL
+        { x: w - MARKER_OFFSET - MARKER_SIZE / 2, y: MARKER_OFFSET + MARKER_SIZE / 2 }, // TR
+        { x: MARKER_OFFSET + MARKER_SIZE / 2, y: h - MARKER_OFFSET - MARKER_SIZE / 2 }, // BL
+        { x: w - MARKER_OFFSET - MARKER_SIZE / 2, y: h - MARKER_OFFSET - MARKER_SIZE / 2 } // BR
+      ];
+      centers.forEach(c => {
+        // Outer black
+        ctx.fillStyle = '#000';
+        ctx.fillRect(c.x - MARKER_SIZE / 2, c.y - MARKER_SIZE / 2, MARKER_SIZE, MARKER_SIZE);
+        // Middle white
+        ctx.fillStyle = '#fff';
+        ctx.fillRect(c.x - MARKER_INNER / 2, c.y - MARKER_INNER / 2, MARKER_INNER, MARKER_INNER);
+        // Core black
+        ctx.fillStyle = '#000';
+        ctx.fillRect(c.x - MARKER_CORE / 2, c.y - MARKER_CORE / 2, MARKER_CORE, MARKER_CORE);
+      });
     }
 
     function drawBubble(ctx, x, y, r) {
@@ -814,8 +807,40 @@
       ctx.stroke();
     }
 
+    function buildQrPayload(cfg) {
+      return JSON.stringify({
+        v: QR_SIGNATURE_VERSION,
+        id: cfg.examId || '',
+        w: cfg.formWidth,
+        h: cfg.formHeight,
+        q: cfg.questionCount,
+        c: cfg.choiceCount
+      });
+    }
+
+    function readQrFromMat(mat) {
+      if (!mat || typeof jsQR !== 'function') return null;
+      const imgData = new ImageData(new Uint8ClampedArray(mat.data), mat.cols, mat.rows);
+      const res = jsQR(imgData.data, imgData.width, imgData.height);
+      return res ? res.data : null;
+    }
+
+    function verifyQrAgainstLayout(warpMat) {
+      if (!layoutConfig) return { ok: false, reason: 'no-layout' };
+      const expected = buildQrPayload({
+        examId: layoutConfig.examId,
+        formWidth: layoutConfig.canvasWidth,
+        formHeight: layoutConfig.canvasHeight,
+        questionCount: layoutConfig.questions?.length || 0,
+        choiceCount: layoutConfig.questions?.[0]?.choices?.length || 0
+      });
+      const data = readQrFromMat(warpMat);
+      if (!data) return { ok: false, reason: 'qr-missing' };
+      if (data !== expected) return { ok: false, reason: 'qr-mismatch' };
+      return { ok: true };
+    }
+
     function drawQRCode(ctx, x, y, size, data) {
-      // Create temporary container for QR
       const tempDiv = document.createElement('div');
       tempDiv.style.position = 'absolute';
       tempDiv.style.left = '-9999px';
@@ -828,7 +853,6 @@
         correctLevel: QRCode.CorrectLevel.M
       });
       
-      // Wait for QR to render then draw to canvas
       setTimeout(() => {
         const qrImg = tempDiv.querySelector('img');
         if (qrImg && qrImg.complete) {
@@ -840,9 +864,8 @@
           }
         }
         document.body.removeChild(tempDiv);
-      }, 100);
+      }, 80);
       
-      // Draw border
       ctx.strokeStyle = '#000';
       ctx.lineWidth = 1;
       ctx.strokeRect(x, y, size, size);
@@ -868,18 +891,34 @@
     // =====================================================
     // CAMERA & OMR
     // =====================================================
-    async function initCamera() {
+    async function initCamera(forceReload = false) {
       try {
-        if (videoStream) return;
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-        });
+        if (videoStream && !forceReload) return;
+        if (videoStream) stopCamera();
+        const selectedId = document.getElementById('cameraSelect')?.value || '';
+        const constraints = {
+          video: {
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        };
+        if (selectedId) {
+          constraints.video.deviceId = { exact: selectedId };
+        } else {
+          constraints.video.facingMode = { ideal: 'environment' };
+        }
+        const stream = await navigator.mediaDevices.getUserMedia(constraints);
         videoStream = stream;
+        const actualId = stream.getVideoTracks()[0]?.getSettings()?.deviceId || selectedId;
+        if (actualId) currentDeviceId = actualId;
         document.getElementById('video').srcObject = stream;
         await document.getElementById('video').play();
+        adjustVideoLayout();
         document.getElementById('captureBtn').disabled = false;
         updateStatus('ready', 'Hazır');
         setLog('cameraLog', '✓ Kamera hazır', 'success');
+        // Kamera listesi etiketleri izin sonrası güncellenir
+        loadCameras();
       } catch (e) {
         setLog('cameraLog', '✗ Kamera hatası: ' + e.message, 'error');
       }
@@ -889,6 +928,73 @@
       const el = document.getElementById('scanStatus');
       el.className = 'scan-status ' + state;
       document.getElementById('scanStatusText').textContent = text;
+    }
+
+    function adjustVideoLayout() {
+      const video = document.getElementById('video');
+      const wrap = video?.parentElement;
+      if (!video || !wrap) return;
+      const vw = video.videoWidth;
+      const vh = video.videoHeight;
+      if (!vw || !vh) return;
+      const wrapWidth = wrap.clientWidth || video.clientWidth || 0;
+      if (!wrapWidth) return;
+      const targetHeight = Math.round(wrapWidth * vh / vw);
+      wrap.style.height = targetHeight + 'px';
+    }
+
+    function stopCamera() {
+      if (autoScanInterval) {
+        clearInterval(autoScanInterval);
+        autoScanInterval = null;
+        isAutoScanning = false;
+        const autoBtn = document.getElementById('autoScanBtn');
+        if (autoBtn) autoBtn.textContent = '🔄 Otomatik';
+      }
+      if (videoStream) {
+        videoStream.getTracks().forEach(t => t.stop());
+        videoStream = null;
+      }
+      const video = document.getElementById('video');
+      if (video) {
+        video.pause?.();
+        video.srcObject = null;
+      }
+      const wrap = video?.parentElement;
+      if (wrap) wrap.style.height = '';
+      const captureBtn = document.getElementById('captureBtn');
+      if (captureBtn) captureBtn.disabled = true;
+      updateStatus('', 'Bekleniyor');
+      clearLiveOverlay();
+    }
+
+    async function loadCameras() {
+      if (!navigator.mediaDevices?.enumerateDevices) return;
+      try {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        availableCameras = devices.filter(d => d.kind === 'videoinput');
+        const select = document.getElementById('cameraSelect');
+        if (!select) return;
+        select.innerHTML = '';
+        if (availableCameras.length === 0) {
+          select.disabled = true;
+          select.innerHTML = '<option>kamera yok</option>';
+          return;
+        }
+        select.disabled = false;
+        availableCameras.forEach((cam, idx) => {
+          const opt = document.createElement('option');
+          opt.value = cam.deviceId || '';
+          opt.textContent = cam.label || `Kamera ${idx + 1}`;
+          select.appendChild(opt);
+        });
+        // Önceki seçim varsa koru, yoksa ilkine geç
+        if (currentDeviceId) select.value = currentDeviceId;
+        if (!select.value && select.options.length > 0) select.selectedIndex = 0;
+        currentDeviceId = select.value;
+      } catch (e) {
+        console.warn('Kamera listesi alınamadı', e);
+      }
     }
 
     function setLog(id, msg, type = '') {
@@ -924,12 +1030,31 @@
         
         if (!markers) {
           updateStatus('', 'Form bulunamadı');
+          clearLiveOverlay();
           if (!isAuto) setLog('omrLog', 'Köşe markerları bulunamadı', 'error');
           return;
         }
+
+        const geom = evaluateMarkerGeometry(markers, binary.cols, binary.rows);
+        if (!geom.ok) {
+          updateStatus('error', 'Hizalama zayıf');
+          clearLiveOverlay();
+          if (!isAuto) setLog('omrLog', `Marker hizası zayıf (${geom.reason})`, 'error');
+          return;
+        }
+
+        renderLiveMarkers(markers, binary.cols, binary.rows);
         
         const warped = warpPerspective(src, markers);
       cv.imshow('warpCanvas', warped);
+
+        const qrCheck = verifyQrAgainstLayout(src);
+        if (!qrCheck.ok) {
+          updateStatus('error', 'QR uyumsuz');
+          clearLiveOverlay();
+          if (!isAuto) setLog('omrLog', `QR doğrulama hatası (${qrCheck.reason})`, 'error');
+          return;
+        }
 
         const result = analyzeBubbles(warped);
       renderResults(result);
@@ -955,66 +1080,258 @@
     }
 
     function detectCornerMarkers(binary, overlay) {
+      const cleaned = new cv.Mat();
+      const kernel = cv.Mat.ones(3, 3, cv.CV_8UC1);
+      cv.morphologyEx(binary, cleaned, cv.MORPH_CLOSE, kernel);
+      kernel.delete();
+    
+      // Önce hiyerarşik (içi boş kare) arayışı yap
+      const markers = findMarkersWithHoles(cleaned, overlay) || findMarkersSimple(cleaned, overlay);
+      cleaned.delete();
+      return markers;
+    }
+
+    function evaluateMarkerGeometry(markers, imgW, imgH) {
+      if (!markers) return { ok: false, reason: 'markers-missing' };
+      const dist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
+      const topW = dist(markers.tl, markers.tr);
+      const bottomW = dist(markers.bl, markers.br);
+      const leftH = dist(markers.tl, markers.bl);
+      const rightH = dist(markers.tr, markers.br);
+      const diag1 = dist(markers.tl, markers.br);
+      const diag2 = dist(markers.tr, markers.bl);
+      const avgW = (topW + bottomW) / 2;
+      const avgH = (leftH + rightH) / 2;
+      if (avgW < 20 || avgH < 20) return { ok: false, reason: 'markers-too-small' };
+      const aspect = avgW / avgH;
+      const usableH = (layoutConfig?.canvasHeight || imgH) - (layoutConfig?.qrBand || 0);
+      const expectedAspect = (layoutConfig?.canvasWidth && usableH > 0)
+        ? layoutConfig.canvasWidth / usableH
+        : imgW / imgH;
+      if (aspect < expectedAspect * 0.65 || aspect > expectedAspect * 1.35) {
+        return { ok: false, reason: 'aspect-mismatch' };
+      }
+      const skewW = Math.abs(topW - bottomW) / avgW;
+      const skewH = Math.abs(leftH - rightH) / avgH;
+      if (skewW > 0.35 || skewH > 0.35) return { ok: false, reason: 'skew-high' };
+      const diagRatio = Math.max(diag1, diag2) / Math.min(diag1, diag2);
+      if (diagRatio > 1.4) return { ok: false, reason: 'diag-mismatch' };
+      return { ok: true };
+    }
+
+    function evaluateMarkerGeometry(markers, imgW, imgH) {
+      if (!markers) return { ok: false, reason: 'markers-missing' };
+      const dist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
+      const topW = dist(markers.tl, markers.tr);
+      const bottomW = dist(markers.bl, markers.br);
+      const leftH = dist(markers.tl, markers.bl);
+      const rightH = dist(markers.tr, markers.br);
+      const diag1 = dist(markers.tl, markers.br);
+      const diag2 = dist(markers.tr, markers.bl);
+      const avgW = (topW + bottomW) / 2;
+      const avgH = (leftH + rightH) / 2;
+      if (avgW < 20 || avgH < 20) return { ok: false, reason: 'markers-too-small' };
+      const aspect = avgW / avgH;
+      const expectedAspect = (layoutConfig?.canvasWidth && layoutConfig?.canvasHeight)
+        ? layoutConfig.canvasWidth / layoutConfig.canvasHeight
+        : imgW / imgH;
+      // +/- %35 tolerans
+      if (aspect < expectedAspect * 0.65 || aspect > expectedAspect * 1.35) {
+        return { ok: false, reason: 'aspect-mismatch' };
+      }
+      const skewW = Math.abs(topW - bottomW) / avgW;
+      const skewH = Math.abs(leftH - rightH) / avgH;
+      if (skewW > 0.35 || skewH > 0.35) return { ok: false, reason: 'skew-high' };
+      const diagRatio = Math.max(diag1, diag2) / Math.min(diag1, diag2);
+      if (diagRatio > 1.4) return { ok: false, reason: 'diag-mismatch' };
+      return { ok: true };
+    }
+
+    function clearLiveOverlay() {
+      const c = document.getElementById('liveOverlay');
+      if (!c) return;
+      const ctx = c.getContext('2d');
+      ctx.clearRect(0, 0, c.width, c.height);
+    }
+
+    function renderLiveMarkers(markers, srcW, srcH) {
+      const c = document.getElementById('liveOverlay');
+      const video = document.getElementById('video');
+      if (!c || !video) return;
+      const w = video.clientWidth || srcW;
+      const h = video.clientHeight || srcH;
+      if (!w || !h || !srcW || !srcH) return;
+      if (c.width !== w || c.height !== h) {
+        c.width = w; c.height = h;
+      }
+      const ctx = c.getContext('2d');
+      ctx.clearRect(0, 0, w, h);
+      if (!markers) return;
+      const sx = w / srcW;
+      const sy = h / srcH;
+      ctx.strokeStyle = 'rgba(6, 182, 212, 0.9)';
+      ctx.lineWidth = 2;
+      const pts = ['tl', 'tr', 'br', 'bl'].map(k => markers[k]).filter(Boolean);
+      if (pts.length === 4) {
+        ctx.beginPath();
+        ctx.moveTo(markers.tl.x * sx, markers.tl.y * sy);
+        ctx.lineTo(markers.tr.x * sx, markers.tr.y * sy);
+        ctx.lineTo(markers.br.x * sx, markers.br.y * sy);
+        ctx.lineTo(markers.bl.x * sx, markers.bl.y * sy);
+        ctx.closePath();
+        ctx.stroke();
+      }
+      pts.forEach(p => {
+        const x = p.x * sx, y = p.y * sy;
+        const size = 16;
+        ctx.strokeRect(x - size / 2, y - size / 2, size, size);
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, Math.PI * 2);
+        ctx.stroke();
+      });
+    }
+
+    function findMarkersWithHoles(binary, overlay) {
+      const contours = new cv.MatVector();
+      const hierarchy = new cv.Mat();
+      cv.findContours(binary, contours, hierarchy, cv.RETR_TREE, cv.CHAIN_APPROX_SIMPLE);
+
+      const imgArea = binary.rows * binary.cols;
+      const minArea = imgArea * 0.00005;
+      const maxArea = imgArea * 0.03;
+      const candidates = [];
+
+      for (let i = 0; i < contours.size(); i++) {
+        const childCount = countChildren(i, hierarchy);
+        if (childCount === 0) continue; // iç delik yoksa geç
+        const cnt = contours.get(i);
+        const area = cv.contourArea(cnt);
+        if (area < minArea || area > maxArea) continue;
+        const rect = cv.boundingRect(cnt);
+        const aspect = rect.width / rect.height;
+        if (aspect < 0.7 || aspect > 1.3) continue;
+        const hull = new cv.Mat();
+        cv.convexHull(cnt, hull);
+        const solidity = area / cv.contourArea(hull);
+        hull.delete();
+        if (solidity < 0.7) continue;
+
+        // İç kare oranını tahmin et (MARKER_INNER/MARKER_SIZE ~ 0.33)
+        const childIdx = firstChild(i, hierarchy);
+        if (childIdx >= 0) {
+          const childArea = Math.abs(cv.contourArea(contours.get(childIdx)));
+          const ratio = childArea / area;
+          if (ratio < 0.05 || ratio > 0.5) continue;
+        }
+
+        candidates.push({
+          center: { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 },
+          rect,
+          area
+        });
+      }
+
+      contours.delete(); hierarchy.delete();
+      return pickCornersFromCandidates(candidates, binary, overlay);
+    }
+
+    function findMarkersSimple(binary, overlay) {
       const contours = new cv.MatVector();
       const hierarchy = new cv.Mat();
       cv.findContours(binary, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-      
-      const candidates = [];
+
       const imgArea = binary.rows * binary.cols;
-      
+      const minArea = imgArea * 0.00008;
+      const maxArea = imgArea * 0.05;
+      const candidates = [];
+
       for (let i = 0; i < contours.size(); i++) {
         const cnt = contours.get(i);
         const area = cv.contourArea(cnt);
-        if (area < imgArea * 0.0003 || area > imgArea * 0.02) continue;
-        
+        if (area < minArea || area > maxArea) continue;
+
         const rect = cv.boundingRect(cnt);
         const aspect = rect.width / rect.height;
-        if (aspect > 0.5 && aspect < 2) {
-          const hull = new cv.Mat();
-          cv.convexHull(cnt, hull);
-          const solidity = area / cv.contourArea(hull);
-          hull.delete();
-          
-          if (solidity > 0.6) {
-            candidates.push({
-              center: { x: rect.x + rect.width/2, y: rect.y + rect.height/2 },
-              rect
-            });
-          }
-        }
+        if (aspect < 0.7 || aspect > 1.3) continue;
+
+        const hull = new cv.Mat();
+        cv.convexHull(cnt, hull);
+        const solidity = area / cv.contourArea(hull);
+        hull.delete();
+        if (solidity < 0.75) continue;
+
+        candidates.push({
+          center: { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 },
+          rect,
+          area
+        });
       }
-      
+
       contours.delete(); hierarchy.delete();
-      if (candidates.length < 4) return null;
-      
-      const cx = binary.cols / 2, cy = binary.rows / 2;
-      let tl, tr, bl, br;
-      let tlD = Infinity, trD = Infinity, blD = Infinity, brD = Infinity;
-      
-      for (const c of candidates) {
-        const left = c.center.x < cx, top = c.center.y < cy;
-        const d = (x, y) => Math.hypot(c.center.x - x, c.center.y - y);
-        
-        if (left && top && d(0, 0) < tlD) { tlD = d(0, 0); tl = c; }
-        if (!left && top && d(binary.cols, 0) < trD) { trD = d(binary.cols, 0); tr = c; }
-        if (left && !top && d(0, binary.rows) < blD) { blD = d(0, binary.rows); bl = c; }
-        if (!left && !top && d(binary.cols, binary.rows) < brD) { brD = d(binary.cols, binary.rows); br = c; }
+      return pickCornersFromCandidates(candidates, binary, overlay);
+    }
+
+    function countChildren(idx, hierarchy) {
+      let count = 0;
+      let child = hierarchy.intPtr(0, idx)[2];
+      while (child !== -1) {
+        count++;
+        child = hierarchy.intPtr(0, child)[0]; // next sibling
       }
-      
-      if (!tl || !tr || !bl || !br) return null;
-      
-      // Draw markers
-      const green = new cv.Scalar(0, 255, 0, 255);
-      [tl, tr, bl, br].forEach(m => {
-        cv.rectangle(overlay, new cv.Point(m.rect.x, m.rect.y), 
-                     new cv.Point(m.rect.x + m.rect.width, m.rect.y + m.rect.height), green, 2);
+      return count;
+    }
+
+    function firstChild(idx, hierarchy) {
+      return hierarchy.intPtr(0, idx)[2];
+    }
+
+    function pickCornersFromCandidates(candidates, binary, overlay) {
+      if (!candidates || candidates.length < 4) return null;
+
+      // Birbirine çok yakın olanları bastır
+      const deduped = [];
+      for (const c of candidates) {
+        const tooClose = deduped.some(d => Math.hypot(d.center.x - c.center.x, d.center.y - c.center.y) < Math.min(d.rect.width, c.rect.width) * 0.8);
+        if (!tooClose) deduped.push(c);
+      }
+      if (deduped.length < 4) return null;
+
+      const W = binary.cols, H = binary.rows;
+      const scoreCorner = (pt, targetX, targetY) => {
+        const dx = pt.x - targetX;
+        const dy = pt.y - targetY;
+        return Math.hypot(dx, dy);
+      };
+
+      const corners = { tl: null, tr: null, bl: null, br: null };
+      let best = { tl: Infinity, tr: Infinity, bl: Infinity, br: Infinity };
+
+      deduped.forEach(c => {
+        const dTL = scoreCorner(c.center, 0, 0);
+        if (dTL < best.tl) { best.tl = dTL; corners.tl = c; }
+        const dTR = scoreCorner(c.center, W, 0);
+        if (dTR < best.tr) { best.tr = dTR; corners.tr = c; }
+        const dBL = scoreCorner(c.center, 0, H);
+        if (dBL < best.bl) { best.bl = dBL; corners.bl = c; }
+        const dBR = scoreCorner(c.center, W, H);
+        if (dBR < best.br) { best.br = dBR; corners.br = c; }
       });
-      
+
+      if (!corners.tl || !corners.tr || !corners.bl || !corners.br) return null;
+
+      if (overlay) {
+        const green = new cv.Scalar(0, 255, 0, 255);
+        [corners.tl, corners.tr, corners.bl, corners.br].forEach(m => {
+          cv.rectangle(overlay, new cv.Point(m.rect.x, m.rect.y),
+                       new cv.Point(m.rect.x + m.rect.width, m.rect.y + m.rect.height), green, 2);
+        });
+      }
+
       return {
-        tl: tl.center,
-        tr: tr.center,
-        bl: bl.center,
-        br: br.center
+        tl: corners.tl.center,
+        tr: corners.tr.center,
+        bl: corners.bl.center,
+        br: corners.br.center
       };
     }
 
@@ -1358,7 +1675,7 @@
       URL.revokeObjectURL(url);
     }
 
-    function persistEntrySafely(entry) {
+    async function persistEntrySafely(entry) {
       // Mümkünse mevcut klasörde tek dosyaya ekle, aksi halde toplu log indir
       appendEntryToLog(entry).then((ok) => {
         if (!ok) fallbackDownloadLog();
@@ -1494,9 +1811,13 @@
       
       const canvas = document.getElementById('captureCanvas');
       const ctx = canvas.getContext('2d');
-      canvas.width = Math.min(640, video.videoWidth);
-      canvas.height = Math.floor(canvas.width * video.videoHeight / video.videoWidth);
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const vw = video.videoWidth || 640;
+      const vh = video.videoHeight || 480;
+      const targetW = Math.min(1280, vw);
+      const targetH = Math.round(targetW * vh / vw);
+      canvas.width = targetW;
+      canvas.height = targetH;
+      ctx.drawImage(video, 0, 0, vw, vh, 0, 0, canvas.width, canvas.height);
       
       if (scanMode === 'answerKey') {
         processAnswerKeyFrame();
@@ -1520,11 +1841,25 @@
         
         if (!markers) {
           setLog('cameraLog', '⚠️ Köşe markerları bulunamadı', 'error');
+          clearLiveOverlay();
+          return;
+        }
+
+        const geom = evaluateMarkerGeometry(markers, binary.cols, binary.rows);
+        if (!geom.ok) {
+          setLog('cameraLog', `⚠️ Marker hizası zayıf (${geom.reason})`, 'error');
+          clearLiveOverlay();
           return;
         }
         
         const warped = warpPerspective(src, markers);
         cv.imshow('warpCanvas', warped);
+        const qrCheck = verifyQrAgainstLayout(src);
+        if (!qrCheck.ok) {
+          setLog('cameraLog', `⚠️ QR doğrulama hatası (${qrCheck.reason})`, 'error');
+          clearLiveOverlay();
+          return;
+        }
         
         // Cevap anahtarını oku
         const result = readAnswerKeyFromScan(warped);
@@ -1747,11 +2082,29 @@
         if (!markers) {
           setLog('cameraLog', '⚠️ Köşe markerları bulunamadı. Formun köşeleri görünür olmalı.', 'error');
           updateStatus('error', 'Marker bulunamadı');
+          clearLiveOverlay();
+          return;
+        }
+
+        const geom = evaluateMarkerGeometry(markers, binary.cols, binary.rows);
+        if (!geom.ok) {
+          setLog('cameraLog', `⚠️ Marker hizası zayıf (${geom.reason})`, 'error');
+          updateStatus('error', 'Hizalama zayıf');
+          clearLiveOverlay();
           return;
         }
         
         const warped = warpPerspective(src, markers);
+        renderLiveMarkers(markers, binary.cols, binary.rows);
         cv.imshow('warpCanvas', warped);
+
+        const qrCheck = verifyQrAgainstLayout(src);
+        if (!qrCheck.ok) {
+          setLog('cameraLog', `⚠️ QR doğrulama hatası (${qrCheck.reason})`, 'error');
+          updateStatus('error', 'QR uyumsuz');
+          clearLiveOverlay();
+          return;
+        }
         
         const result = analyzeBubbles(warped);
         renderResults(result);
@@ -1792,11 +2145,28 @@
         
         if (!markers) {
           setLog('cameraLog', '⚠️ Köşe markerları bulunamadı', 'error');
+          clearLiveOverlay();
+          return;
+        }
+
+        const geom = evaluateMarkerGeometry(markers, binary.cols, binary.rows);
+        if (!geom.ok) {
+          setLog('cameraLog', `⚠️ Marker hizası zayıf (${geom.reason})`, 'error');
+          clearLiveOverlay();
           return;
         }
         
         const warped = warpPerspective(src, markers);
+        renderLiveMarkers(markers, binary.cols, binary.rows);
         cv.imshow('warpCanvas', warped);
+
+        const qrCheck = verifyQrAgainstLayout(warped);
+        if (!qrCheck.ok) {
+          setLog('cameraLog', `⚠️ QR doğrulama hatası (${qrCheck.reason})`, 'error');
+          clearLiveOverlay();
+          warped.delete();
+          return;
+        }
         
         const result = readAnswerKeyFromScan(warped);
         

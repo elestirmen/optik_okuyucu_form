@@ -152,9 +152,12 @@ Modern, kullanıcı dostu bir optik form tasarlama ve okuma uygulaması. Canvas 
    cd optik_okuyucu
    ```
 
-2. **Tarayıcıda Açın**:
+2. **Tarayıcıda Açın (statik kullanım)**:
    - `index.html` dosyasını modern bir tarayıcıda açın
    - HTTPS üzerinden çalıştırmanız önerilir (kamera erişimi için)
+
+3. **(Opsiyonel) Statik sunucu ile açın**:
+   - İsterseniz herhangi bir static file server (örn. `python -m http.server`) kullanarak `http://localhost:8000` üzerinden açabilirsiniz.
 
 3. **Bağımlılıklar**:
    - Tüm kütüphaneler CDN üzerinden yüklenir
