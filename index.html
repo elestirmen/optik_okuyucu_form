@@ -206,6 +206,7 @@
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   
   <script>
     window.cvReady = false;
@@ -409,6 +410,12 @@
               </div>
               <div class="result-details" id="resultDetails">Sonuçlar burada...</div>
             </div>
+            <div class="btn-group" style="margin-top:10px;">
+              <button class="btn secondary" id="downloadTxtBtn" style="padding:6px 10px;font-size:11px;">TXT Listesi</button>
+              <button class="btn secondary" id="downloadCsvBtn" style="padding:6px 10px;font-size:11px;">Excel (CSV)</button>
+              <span id="sessionCount" style="font-size:11px;color:var(--muted);">0 kayit</span>
+            </div>
+            <div class="result-details" id="sessionList">Henuz kayit yok.</div>
             <div class="log" id="omrLog">Hazır.</div>
           </div>
         </div>
@@ -426,6 +433,7 @@
     const FILL_ROI_SCALE = 1.04; // Baloncuk ROI'sini hafif büyüt, gürültü kapma riskini azalt
     const FILL_MASK_RATIO = 0.32; // ROI içinde ölçüm yapılacak iç daire oranı (çerçeveyi daha az say)
     const BLANK_GUARD = 0.18; // max skor bunun altındaysa eşikten bağımsız olarak Boş kabul et
+    const sessionResults = [];
     let layoutConfig = null;
     let answerKey = {};
     let videoStream = null;
@@ -448,6 +456,8 @@
       document.getElementById('startCameraBtn').addEventListener('click', initCamera);
       document.getElementById('captureBtn').addEventListener('click', () => captureAndProcess());
       document.getElementById('autoScanBtn').addEventListener('click', toggleAutoScan);
+      document.getElementById('downloadTxtBtn').addEventListener('click', downloadSessionTxt);
+      document.getElementById('downloadCsvBtn').addEventListener('click', downloadSessionCsv);
       
       // Cevap anahtarı event listener'ları
       document.getElementById('answerKeySource').addEventListener('change', toggleAnswerKeyMode);
@@ -462,6 +472,8 @@
       document.getElementById('fileInput').addEventListener('change', handleFileSelect);
       document.getElementById('processFileBtn').addEventListener('click', processUploadedFile);
       document.getElementById('clearFileBtn').addEventListener('click', clearUploadedFile);
+      
+      renderSessionList();
     });
 
     function setupTabs() {
@@ -912,6 +924,7 @@
 
         const result = analyzeBubbles(warped);
       renderResults(result);
+      addSessionResult(result);
         
         if (isAuto && result.correct + result.wrong > 0) {
           toggleAutoScan();
@@ -1182,6 +1195,82 @@
       }).join('');
       
       document.getElementById('resultDetails').innerHTML = html;
+    }
+
+    // =====================================================
+    // SESSION LOG / EXPORT
+    // =====================================================
+    function addSessionResult(r) {
+      const entry = {
+        id: sessionResults.length + 1,
+        studentNo: (r.studentNo && !r.studentNo.includes('?')) ? r.studentNo : 'Bilinmiyor',
+        correct: r.correct,
+        wrong: r.wrong,
+        blank: r.blank,
+        multi: r.multi,
+        net: r.net,
+        perQuestion: r.perQuestion.map(p => ({ ...p }))
+      };
+      sessionResults.push(entry);
+      renderSessionList();
+    }
+
+    function renderSessionList() {
+      const listEl = document.getElementById('sessionList');
+      const countEl = document.getElementById('sessionCount');
+      if (!listEl) return;
+      if (countEl) countEl.textContent = `${sessionResults.length} kayit`;
+      if (sessionResults.length === 0) {
+        listEl.textContent = 'Henuz kayit yok.';
+        return;
+      }
+      const recent = sessionResults.slice(-8).reverse();
+      listEl.innerHTML = recent.map(r => {
+        return `<div>#${r.id} - ${r.studentNo || 'Bilinmiyor'} | D:${r.correct} Y:${r.wrong} B:${r.blank} C:${r.multi} Net:${r.net}</div>`;
+      }).join('');
+    }
+
+    function downloadSessionTxt() {
+      if (sessionResults.length === 0) { alert('Kayit yok.'); return; }
+      const lines = sessionResults.map(r => {
+        const answers = (r.perQuestion || []).map(p => p.marked || '-').join('');
+        return `#${r.id}	${r.studentNo || 'Bilinmiyor'}	D:${r.correct}	Y:${r.wrong}	B:${r.blank}	Coklu:${r.multi}	Net:${r.net}	Cevaplar:${answers}`;
+      });
+      const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'oturum-listesi.txt';
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function csvEscape(v) {
+      const s = v === undefined || v === null ? '' : String(v);
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+
+    function downloadSessionCsv() {
+      if (sessionResults.length === 0) { alert('Kayit yok.'); return; }
+      const maxQ = Math.max(...sessionResults.map(r => (r.perQuestion || []).length || 0));
+      const header = ['Sira','OgrenciNo','Dogru','Yanlis','Bos','Coklu','Net'];
+      for (let i = 1; i <= maxQ; i++) header.push(`S${i}`);
+      const rows = sessionResults.map(r => {
+        const base = [r.id, r.studentNo || '', r.correct, r.wrong, r.blank, r.multi, r.net];
+        const answers = r.perQuestion || [];
+        for (let i = 0; i < maxQ; i++) {
+          base.push(answers[i] ? (answers[i].marked || '') : '');
+        }
+        return base.map(csvEscape).join(',');
+      });
+      const csv = [header.map(csvEscape).join(','), ...rows].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'oturum-sonuclari.csv';
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
     // =====================================================
@@ -1549,6 +1638,7 @@
         
         const result = analyzeBubbles(warped);
         renderResults(result);
+        addSessionResult(result);
         
         updateStatus('found', '✓ Form okundu!');
         setLog('cameraLog', '✅ Analiz tamamlandı!', 'success');
