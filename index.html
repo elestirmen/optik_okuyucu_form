@@ -1132,7 +1132,6 @@
         }
         
         perQuestion.push({ q: q.questionNumber, marked: markedLabel, status, maxScore: maxScore.toFixed(2) });
-        perQuestion.push({ q: q.questionNumber, marked: effectiveFilled.map(f => f.opt).join(',') || '-', status, maxScore: maxScore.toFixed(2) });
       }
       
       // Debug görüntüsünü göster
