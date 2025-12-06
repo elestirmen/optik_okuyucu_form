@@ -439,8 +439,6 @@
     let logFileHandle = null;
     const LOG_FILE_NAME = 'session-log.txt';
     const fileSaveSupported = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
-    let saveDirHandle = null;
-    const fileSaveSupported = typeof window !== 'undefined' && 'showDirectoryPicker' in window;
     let layoutConfig = null;
     let answerKey = {};
     let videoStream = null;
@@ -883,6 +881,17 @@
       } catch (e) {
         setLog('cameraLog', '✗ Kamera hatası: ' + e.message, 'error');
       }
+    }
+
+    function stopCamera() {
+      if (!videoStream) return;
+      videoStream.getTracks().forEach(t => t.stop());
+      videoStream = null;
+      const videoEl = document.getElementById('video');
+      if (videoEl) videoEl.srcObject = null;
+      const captureBtn = document.getElementById('captureBtn');
+      if (captureBtn) captureBtn.disabled = true;
+      updateStatus('', 'Kamera kapalı');
     }
 
     function updateStatus(state, text) {
