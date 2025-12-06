@@ -1,9 +1,9 @@
 // =====================================================
 // GLOBAL STATE
 // =====================================================
-const MARKER_OFFSET = 5;
-const MARKER_SIZE = 18;
-const MARKER_INNER = 6;
+const MARKER_OFFSET = 8;
+const MARKER_SIZE = 26;
+const MARKER_INNER = 10;
 const sessionResults = [];
 let saveDirHandle = null;
 let logFileHandle = null;
@@ -160,10 +160,11 @@ function drawForm(cfg) {
   const bubbleGap = cfg.bubbleSize + 3;
   const rowH = cfg.bubbleSize + cfg.rowGap;
   
-  let y = margin + 10;
+  // Header başlangıcı: markerların bitişinden sonra yer aç
+  let y = Math.max(margin + 10, MARKER_OFFSET + MARKER_SIZE + 10);
   
   // === HEADER: Öğrenci No + Anahtar ===
-  const studentStartX = margin;
+  const studentStartX = Math.max(margin, MARKER_OFFSET + MARKER_SIZE + 10);
   const studentStartY = y;
   
   ctx.font = 'bold 9px Inter, sans-serif';
@@ -247,8 +248,9 @@ function drawForm(cfg) {
   
   // === QUESTIONS SECTION ===
   const questionsPerColumn = Math.ceil(cfg.questionCount / cfg.columnCount);
-  // Not: canvas.width scale edilmiş, çizimde cfg.formWidth kullanmalıyız
-  const columnWidth = (cfg.formWidth - margin * 2) / cfg.columnCount;
+  // Kolonlar arasında şık grubu sonrası boşluk bırakmak için ekstra boşluk ekle
+  const columnGap = cfg.bubbleSize; // yaklaşık bir karakterlik boşluk
+  const columnWidth = (cfg.formWidth - margin * 2 - columnGap * (cfg.columnCount - 1)) / cfg.columnCount;
   
   // Store bubble positions for OMR
   layoutConfig.questions = [];
@@ -269,15 +271,17 @@ function drawForm(cfg) {
   const headerRepeatInterval = cfg.headerRepeat; // Her N soruda bir harf başlıkları tekrarla
   
   for (let col = 0; col < cfg.columnCount; col++) {
-    const colX = margin + col * columnWidth;
+    const colX = margin + col * (columnWidth + columnGap);
     const labelStartX = colX + 25;
     
-    // İlk sütun başlığı (A B C D E)
+    // İlk sütun başlığı (A B C D E) - balonların hemen altında küçük boşlukla
+    const labelToBubbleGap = Math.max(6, Math.round(cfg.bubbleSize * 0.4));
+    const headerY = y + labelToBubbleGap;
     ctx.font = '8px Inter, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#666';
     for (let i = 0; i < letters.length; i++) {
-      ctx.fillText(letters[i], labelStartX + i * bubbleGap, y);
+      ctx.fillText(letters[i], labelStartX + i * bubbleGap, headerY);
     }
     
     // Draw questions
@@ -290,7 +294,7 @@ function drawForm(cfg) {
       // Her 5 soruda bir (başlangıç hariç) harf başlıklarını tekrarla
       if (qIdx > 0 && qIdx % headerRepeatInterval === 0) {
         extraOffset += rowH * 0.8;
-        const headerY = y + 12 + qIdx * rowH + extraOffset - rowH * 0.6;
+        const headerY = y + labelToBubbleGap + 12 + qIdx * rowH + extraOffset - rowH * 0.6;
         
         ctx.font = '8px Inter, sans-serif';
         ctx.textAlign = 'center';
@@ -333,50 +337,24 @@ function drawForm(cfg) {
 }
 
 function drawCornerMarkers(ctx, w, h) {
+  drawCrossMarker(ctx, MARKER_OFFSET, MARKER_OFFSET, MARKER_SIZE);
+  drawCrossMarker(ctx, w - MARKER_OFFSET - MARKER_SIZE, MARKER_OFFSET, MARKER_SIZE);
+  drawCrossMarker(ctx, w - MARKER_OFFSET - MARKER_SIZE, h - MARKER_OFFSET - MARKER_SIZE, MARKER_SIZE);
+  drawCrossMarker(ctx, MARKER_OFFSET, h - MARKER_OFFSET - MARKER_SIZE, MARKER_SIZE);
+}
+
+function drawCrossMarker(ctx, x, y, size) {
+  const border = Math.max(2, Math.floor(size * 0.2));
   ctx.fillStyle = '#000';
-  
-  // Top-left
-  ctx.fillRect(MARKER_OFFSET, MARKER_OFFSET, MARKER_SIZE, MARKER_SIZE);
+  ctx.fillRect(x, y, size, size);
   ctx.fillStyle = '#fff';
-  ctx.fillRect(
-    MARKER_OFFSET + MARKER_SIZE - MARKER_INNER,
-    MARKER_OFFSET + MARKER_SIZE - MARKER_INNER,
-    MARKER_INNER,
-    MARKER_INNER
-  );
-  
-  // Top-right
+  ctx.fillRect(x + border, y + border, size - border * 2, size - border * 2);
   ctx.fillStyle = '#000';
-  ctx.fillRect(w - MARKER_OFFSET - MARKER_SIZE, MARKER_OFFSET, MARKER_SIZE, MARKER_SIZE);
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(
-    w - MARKER_OFFSET - MARKER_SIZE,
-    MARKER_OFFSET + MARKER_SIZE - MARKER_INNER,
-    MARKER_INNER,
-    MARKER_INNER
-  );
-  
-  // Bottom-left
-  ctx.fillStyle = '#000';
-  ctx.fillRect(MARKER_OFFSET, h - MARKER_OFFSET - MARKER_SIZE, MARKER_SIZE, MARKER_SIZE);
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(
-    MARKER_OFFSET + MARKER_SIZE - MARKER_INNER,
-    h - MARKER_OFFSET - MARKER_SIZE,
-    MARKER_INNER,
-    MARKER_INNER
-  );
-  
-  // Bottom-right
-  ctx.fillStyle = '#000';
-  ctx.fillRect(w - MARKER_OFFSET - MARKER_SIZE, h - MARKER_OFFSET - MARKER_SIZE, MARKER_SIZE, MARKER_SIZE);
-  ctx.fillStyle = '#fff';
-  ctx.fillRect(
-    w - MARKER_OFFSET - MARKER_SIZE,
-    h - MARKER_OFFSET - MARKER_SIZE,
-    MARKER_INNER,
-    MARKER_INNER
-  );
+  const lineW = Math.max(2, Math.floor(size * 0.14));
+  const midX = x + size / 2 - lineW / 2;
+  const midY = y + size / 2 - lineW / 2;
+  ctx.fillRect(midX, y + border, lineW, size - border * 2);
+  ctx.fillRect(x + border, midY, size - border * 2, lineW);
 }
 
 function drawBubble(ctx, x, y, r) {
