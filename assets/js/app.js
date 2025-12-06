@@ -4,9 +4,6 @@
 const MARKER_OFFSET = 5;
 const MARKER_SIZE = 18;
 const MARKER_INNER = 6;
-const FILL_ROI_SCALE = 1.04; // Baloncuk ROI'sini hafif büyüt, gürültü kapma riskini azalt
-const FILL_MASK_RATIO = 0.32; // ROI içinde ölçüm yapılacak iç daire oranı (çerçeveyi daha az say)
-const BLANK_GUARD = 0.18; // max skor bunun altındaysa eşikten bağımsız olarak Boş kabul et
 const sessionResults = [];
 let saveDirHandle = null;
 let logFileHandle = null;
@@ -18,6 +15,10 @@ let videoStream = null;
 let autoScanInterval = null;
 let isAutoScanning = false;
 let scanMode = 'student'; // 'student' veya 'answerKey'
+let shadowMode = false;
+const BASE_FILL_ROI_SCALE = 1.04;
+const BASE_FILL_MASK_RATIO = 0.32;
+const BASE_BLANK_GUARD = 0.18;
 let availableCameras = [];
 let preferredCameraId = null;
 
@@ -45,6 +46,12 @@ document.addEventListener('DOMContentLoaded', () => {
     cameraSelectEl.addEventListener('change', onCameraChange);
   }
   loadCameraDevices();
+  const shadowToggle = document.getElementById('shadowMode');
+  if (shadowToggle) {
+    shadowToggle.addEventListener('change', () => {
+      shadowMode = shadowToggle.checked;
+    });
+  }
   
   // Cevap anahtarı event listener'ları
   document.getElementById('answerKeySource').addEventListener('change', toggleAnswerKeyMode);
@@ -155,20 +162,8 @@ function drawForm(cfg) {
   
   let y = margin + 10;
   
-  // === HEADER: QR + Öğrenci No + Anahtar ===
-  const qrSize = 60;
-  
-  // QR Code
-  drawQRCode(ctx, margin, y, qrSize, cfg.examId);
-  
-  // Web URL under QR
-  ctx.fillStyle = '#000';
-  ctx.font = '8px Inter, sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText(cfg.webUrl, margin + qrSize/2, y + qrSize + 10);
-  
-  // === Öğrenci No Section ===
-  const studentStartX = margin + qrSize + 15;
+  // === HEADER: Öğrenci No + Anahtar ===
+  const studentStartX = margin;
   const studentStartY = y;
   
   ctx.font = 'bold 9px Inter, sans-serif';
@@ -443,6 +438,45 @@ function downloadPNG() {
   link.click();
 }
 
+function getPreprocessParams() {
+  const shadow = shadowMode || (document.getElementById('shadowMode')?.checked);
+  if (shadow) {
+    return { clahe: true, blurSigma: 1.0, blockSize: 13, cValue: 3 };
+  }
+  return { clahe: false, blurSigma: 0, blockSize: 11, cValue: 2 };
+}
+
+function preprocessToBinary(srcMat) {
+  const p = getPreprocessParams();
+  const gray = new cv.Mat();
+  cv.cvtColor(srcMat, gray, cv.COLOR_RGBA2GRAY);
+  if (p.clahe && cv.CLAHE) {
+    const clahe = new cv.CLAHE(2.0, new cv.Size(8, 8));
+    clahe.apply(gray, gray);
+    clahe.delete();
+  }
+  const blur = new cv.Mat();
+  if (p.blurSigma && p.blurSigma > 0) {
+    cv.GaussianBlur(gray, blur, new cv.Size(0, 0), p.blurSigma, p.blurSigma);
+  } else {
+    cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0);
+  }
+  const binary = new cv.Mat();
+  const block = p.blockSize && p.blockSize % 2 === 1 ? p.blockSize : (p.blockSize || 11) | 1;
+  const cVal = p.cValue ?? 2;
+  cv.adaptiveThreshold(blur, binary, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, block, cVal);
+  gray.delete(); blur.delete();
+  return binary;
+}
+
+function getFillParams() {
+  const shadow = shadowMode || (document.getElementById('shadowMode')?.checked);
+  if (shadow) {
+    return { roiScale: 1.02, maskRatio: 0.30, blankGuard: 0.14 };
+  }
+  return { roiScale: BASE_FILL_ROI_SCALE, maskRatio: BASE_FILL_MASK_RATIO, blankGuard: BASE_BLANK_GUARD };
+}
+
 async function loadCameraDevices() {
   const select = document.getElementById('cameraSelect');
   if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices || !select) return;
@@ -553,13 +587,11 @@ function toggleAutoScan() {
 }
 
 function processFrame(isAuto) {
-  let src, gray, blurred, binary, markerOverlay;
+  let src, binary, markerOverlay;
   
   try {
     src = cv.imread('captureCanvas');
-    gray = new cv.Mat(); cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-    blurred = new cv.Mat(); cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
-    binary = new cv.Mat(); cv.adaptiveThreshold(blurred, binary, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 11, 2);
+    binary = preprocessToBinary(src);
     
     markerOverlay = src.clone();
     const markers = detectCornerMarkers(binary, markerOverlay);
@@ -595,8 +627,6 @@ function processFrame(isAuto) {
     if (!isAuto) setLog('omrLog', 'Hata: ' + e.message, 'error');
   } finally {
     if (src) src.delete();
-    if (gray) gray.delete();
-    if (blurred) blurred.delete();
     if (binary) binary.delete();
     if (markerOverlay) markerOverlay.delete();
   }
@@ -691,10 +721,9 @@ function warpPerspective(src, markers) {
 function analyzeBubbles(warpMat, debugDraw = true) {
   const threshold = parseFloat(document.getElementById('fillThreshold').value) || 0.20;
   const penalty = parseFloat(document.getElementById('penalty').value) || 0.25;
+  const fillParams = getFillParams();
   
-  const gray = new cv.Mat(); cv.cvtColor(warpMat, gray, cv.COLOR_RGBA2GRAY);
-  // Daha küçük blok ve düşük C: lekeler/parlamalar daha az doldurulur
-  const binary = new cv.Mat(); cv.adaptiveThreshold(gray, binary, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 11, 2);
+  const binary = preprocessToBinary(warpMat);
   
   const w = warpMat.cols, h = warpMat.rows;
   let correct = 0, wrong = 0, blank = 0, multi = 0;
@@ -711,10 +740,10 @@ function analyzeBubbles(warpMat, debugDraw = true) {
   console.log(`Toplam soru: ${layoutConfig.questions.length}`);
   
   for (const q of layoutConfig.questions) {
-    const scores = q.choices.map(c => {
-      // ROI boyutlarını hesapla
-      const roiW = Math.round(c.width * w * FILL_ROI_SCALE);
-      const roiH = Math.round(c.height * h * FILL_ROI_SCALE);
+      const scores = q.choices.map(c => {
+        // ROI boyutlarını hesapla
+        const roiW = Math.round(c.width * w * fillParams.roiScale);
+        const roiH = Math.round(c.height * h * fillParams.roiScale);
       
       // Merkez koordinatlarından sol üst köşeyi hesapla
       const rectX = Math.max(0, Math.round(c.x * w - roiW / 2));
@@ -735,16 +764,16 @@ function analyzeBubbles(warpMat, debugDraw = true) {
       }
       
       const roi = binary.roi(rect);
-      let score = 0;
-      // Dairesel maske ile i? b?lgeyi oku (?er?eve ?izgisini hari? tut)
-      if (roi.rows > 0 && roi.cols > 0) {
-        const mask = new cv.Mat.zeros(roi.rows, roi.cols, cv.CV_8UC1);
-        const r = Math.floor(Math.min(roi.rows, roi.cols) * FILL_MASK_RATIO);
-        const cx = Math.floor(roi.cols / 2);
-        const cy = Math.floor(roi.rows / 2);
-        cv.circle(mask, new cv.Point(cx, cy), r, new cv.Scalar(255, 255, 255, 255), -1);
-        const masked = new cv.Mat();
-        cv.bitwise_and(roi, mask, masked);
+          let score = 0;
+          // Dairesel maske ile i? b?lgeyi oku (?er?eve ?izgisini hari? tut)
+          if (roi.rows > 0 && roi.cols > 0) {
+            const mask = new cv.Mat.zeros(roi.rows, roi.cols, cv.CV_8UC1);
+            const r = Math.floor(Math.min(roi.rows, roi.cols) * fillParams.maskRatio);
+            const cx = Math.floor(roi.cols / 2);
+            const cy = Math.floor(roi.rows / 2);
+            cv.circle(mask, new cv.Point(cx, cy), r, new cv.Scalar(255, 255, 255, 255), -1);
+            const masked = new cv.Mat();
+            cv.bitwise_and(roi, mask, masked);
         const maskArea = cv.countNonZero(mask);
         score = maskArea > 0 ? cv.countNonZero(masked) / maskArea : 0;
         masked.delete(); mask.delete();
@@ -762,7 +791,7 @@ function analyzeBubbles(warpMat, debugDraw = true) {
     // En yüksek skora sahip olanı bul
     const maxScore = Math.max(...scores.map(s => s.score));
     // Gürültü alt sınırı: max skor çok düşükse doğrudan boş kabul et
-    if (maxScore < BLANK_GUARD) {
+    if (maxScore < fillParams.blankGuard) {
       blank++;
       perQuestion.push({ q: q.questionNumber, marked: '-', status: 'Boş', maxScore: maxScore.toFixed(2) });
       continue;
@@ -840,7 +869,7 @@ function analyzeBubbles(warpMat, debugDraw = true) {
     suspiciousReasons.push('Öğrenci no okunamadı');
   }
 
-  gray.delete(); binary.delete();
+  binary.delete();
   
   const net = (correct - wrong * penalty).toFixed(2);
   return { correct, wrong, blank, multi, net, perQuestion, studentNo, suspicious: suspiciousReasons.length > 0, suspiciousReasons };
@@ -1165,13 +1194,11 @@ function captureAndProcess(isAuto = false) {
 }
 
 function processAnswerKeyFrame() {
-  let src, gray, blurred, binary, markerOverlay;
+  let src, binary, markerOverlay;
   
   try {
     src = cv.imread('captureCanvas');
-    gray = new cv.Mat(); cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-    blurred = new cv.Mat(); cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
-    binary = new cv.Mat(); cv.adaptiveThreshold(blurred, binary, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 11, 2);
+    binary = preprocessToBinary(src);
     
     markerOverlay = src.clone();
     const markers = detectCornerMarkers(binary, markerOverlay);
@@ -1202,30 +1229,28 @@ function processAnswerKeyFrame() {
       setLog('cameraLog', '⚠️ Cevap anahtarı okunamadı, tekrar deneyin', 'error');
     }
     
-    warped.delete();
-  } catch (e) {
-    setLog('cameraLog', 'Hata: ' + e.message, 'error');
-  } finally {
-    if (src) src.delete();
-    if (gray) gray.delete();
-    if (blurred) blurred.delete();
-    if (binary) binary.delete();
-    if (markerOverlay) markerOverlay.delete();
-  }
-}
+        warped.delete();
+      } catch (e) {
+        setLog('cameraLog', 'Hata: ' + e.message, 'error');
+      } finally {
+        if (src) src.delete();
+        if (binary) binary.delete();
+        if (markerOverlay) markerOverlay.delete();
+      }
+    }
 
 function readAnswerKeyFromScan(warpMat) {
-  const threshold = parseFloat(document.getElementById('fillThreshold').value) || 0.28;
+  const threshold = parseFloat(document.getElementById('fillThreshold').value) || 0.20;
+  const fillParams = getFillParams();
   
-  const gray = new cv.Mat(); cv.cvtColor(warpMat, gray, cv.COLOR_RGBA2GRAY);
-  const binary = new cv.Mat(); cv.adaptiveThreshold(gray, binary, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 15, 4);
+  const binary = preprocessToBinary(warpMat);
   
   const w = warpMat.cols, h = warpMat.rows;
   const answers = {};
   let successCount = 0;
   
   // ROI boyut çarpanı
-  const roiScale = 1.3;
+  const roiScale = Math.max(fillParams.roiScale, 1.02);
   
   for (const q of layoutConfig.questions) {
     const scores = q.choices.map(c => {
@@ -1244,17 +1269,17 @@ function readAnswerKeyFromScan(warpMat) {
       if (rect.y + rect.height > h) rect.height = h - rect.y;
       if (rect.width <= 0 || rect.height <= 0) return { opt: c.option, score: 0 };
       
-      const roi = binary.roi(rect);
-      let score = 0;
-      // Dairesel maske ile i? b?lgeyi oku (?er?eve ?izgisini hari? tut)
-      if (roi.rows > 0 && roi.cols > 0) {
-        const mask = new cv.Mat.zeros(roi.rows, roi.cols, cv.CV_8UC1);
-        const r = Math.floor(Math.min(roi.rows, roi.cols) * FILL_MASK_RATIO);
-        const cx = Math.floor(roi.cols / 2);
-        const cy = Math.floor(roi.rows / 2);
-        cv.circle(mask, new cv.Point(cx, cy), r, new cv.Scalar(255, 255, 255, 255), -1);
-        const masked = new cv.Mat();
-        cv.bitwise_and(roi, mask, masked);
+          const roi = binary.roi(rect);
+          let score = 0;
+          // Dairesel maske ile i? b?lgeyi oku (?er?eve ?izgisini hari? tut)
+          if (roi.rows > 0 && roi.cols > 0) {
+            const mask = new cv.Mat.zeros(roi.rows, roi.cols, cv.CV_8UC1);
+            const r = Math.floor(Math.min(roi.rows, roi.cols) * fillParams.maskRatio);
+            const cx = Math.floor(roi.cols / 2);
+            const cy = Math.floor(roi.rows / 2);
+            cv.circle(mask, new cv.Point(cx, cy), r, new cv.Scalar(255, 255, 255, 255), -1);
+            const masked = new cv.Mat();
+            cv.bitwise_and(roi, mask, masked);
         const maskArea = cv.countNonZero(mask);
         score = maskArea > 0 ? cv.countNonZero(masked) / maskArea : 0;
         masked.delete(); mask.delete();
@@ -1263,29 +1288,29 @@ function readAnswerKeyFromScan(warpMat) {
       return { opt: c.option, score };
     });
     
-    // En yüksek skora sahip şıkkı bul
-    const maxScore = Math.max(...scores.map(s => s.score));
-    const filled = scores.filter(s => s.score >= threshold);
-    
-    // Tek işaretli cevap varsa al
-    if (filled.length === 1) {
-      answers[q.questionNumber] = filled[0].opt;
-      successCount++;
-    } 
-    // Hiçbiri threshold'u geçmiyorsa ama belirgin bir işaret varsa
-    else if (filled.length === 0 && maxScore >= threshold * 0.6) {
-      const best = scores.find(s => s.score === maxScore);
-      // Diğerlerinden belirgin şekilde yüksek olmalı
-      const secondMax = Math.max(...scores.filter(s => s.score !== maxScore).map(s => s.score));
-      if (best && maxScore > secondMax * 1.5) {
-        answers[q.questionNumber] = best.opt;
-        successCount++;
+        // En yüksek skora sahip şıkkı bul
+        const maxScore = Math.max(...scores.map(s => s.score));
+        const filled = scores.filter(s => s.score >= threshold);
+        
+        // Tek işaretli cevap varsa al
+        if (filled.length === 1) {
+          answers[q.questionNumber] = filled[0].opt;
+          successCount++;
+        } 
+        // Hiçbiri threshold'u geçmiyorsa ama belirgin bir işaret varsa
+        else if (filled.length === 0 && maxScore >= Math.max(fillParams.blankGuard, threshold * 0.6)) {
+          const best = scores.find(s => s.score === maxScore);
+          // Diğerlerinden belirgin şekilde yüksek olmalı
+          const secondMax = Math.max(...scores.filter(s => s.score !== maxScore).map(s => s.score));
+          if (best && maxScore > secondMax * 1.35) {
+            answers[q.questionNumber] = best.opt;
+            successCount++;
+          }
+        }
       }
-    }
-  }
   
-  gray.delete(); binary.delete();
-  
+      binary.delete();
+      
   console.log(`Cevap anahtarı okuma: ${successCount}/${layoutConfig.questions.length} başarılı`);
   
   return {
@@ -1387,7 +1412,7 @@ function processUploadedFile() {
 }
 
 function processStudentFormFromFile() {
-  let src, gray, blurred, binary, markerOverlay;
+  let src, binary, markerOverlay;
   
   try {
     src = cv.imread('captureCanvas');
@@ -1395,12 +1420,7 @@ function processStudentFormFromFile() {
       throw new Error('Resim okunamadı');
     }
     
-    gray = new cv.Mat();
-    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-    blurred = new cv.Mat();
-    cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
-    binary = new cv.Mat();
-    cv.adaptiveThreshold(blurred, binary, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 11, 2);
+    binary = preprocessToBinary(src);
     
     markerOverlay = src.clone();
     const markers = detectCornerMarkers(binary, markerOverlay);
@@ -1418,8 +1438,8 @@ function processStudentFormFromFile() {
     const result = analyzeBubbles(warped);
     renderResults(result);
     if (result.suspicious) {
-      updateStatus('error', 'Şüpheli okuma');
-      setLog('cameraLog', `⚠️ Şüpheli okuma, kaydedilmedi: ${result.suspiciousReasons.join(', ')}`, 'error');
+      updateStatus('ready', 'Şüpheli okuma');
+      setLog('cameraLog', `⚠️ Şüpheli okuma: ${result.suspiciousReasons.join(', ')}`, 'error');
     } else {
       safeAddSessionResult(result);
       updateStatus('found', '✓ Form okundu!');
@@ -1433,24 +1453,17 @@ function processStudentFormFromFile() {
     updateStatus('error', 'Hata');
   } finally {
     if (src) src.delete();
-    if (gray) gray.delete();
-    if (blurred) blurred.delete();
     if (binary) binary.delete();
     if (markerOverlay) markerOverlay.delete();
   }
 }
 
 function processAnswerKeyFromFile() {
-  let src, gray, blurred, binary, markerOverlay;
+  let src, binary, markerOverlay;
   
   try {
     src = cv.imread('captureCanvas');
-    gray = new cv.Mat();
-    cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY);
-    blurred = new cv.Mat();
-    cv.GaussianBlur(gray, blurred, new cv.Size(5, 5), 0);
-    binary = new cv.Mat();
-    cv.adaptiveThreshold(blurred, binary, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, 11, 2);
+    binary = preprocessToBinary(src);
     
     markerOverlay = src.clone();
     const markers = detectCornerMarkers(binary, markerOverlay);
@@ -1468,6 +1481,10 @@ function processAnswerKeyFromFile() {
     
     if (result.success) {
       answerKey = result.answers;
+      const answerCountInput = document.getElementById('answerKeyCount');
+      if (answerCountInput && layoutConfig?.questions?.length) {
+        answerCountInput.value = layoutConfig.questions.length;
+      }
       generateAnswerKeyGrid();
       updateAnswerKeyStatus();
       
@@ -1484,8 +1501,6 @@ function processAnswerKeyFromFile() {
     setLog('cameraLog', 'Hata: ' + e.message, 'error');
   } finally {
     if (src) src.delete();
-    if (gray) gray.delete();
-    if (blurred) blurred.delete();
     if (binary) binary.delete();
     if (markerOverlay) markerOverlay.delete();
   }

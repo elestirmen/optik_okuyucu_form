@@ -9,7 +9,25 @@
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="assets/css/styles.css">
   
-  <script src="assets/js/opencv-init.js"></script>
+  <script>
+    window.cvReady = false;
+    function onOpenCvReady() {
+      window.cvReady = true;
+      const badge = document.getElementById('cv-status');
+      if (badge) {
+        badge.textContent = '✓ OpenCV';
+        badge.classList.add('ready');
+      } else {
+        document.addEventListener('DOMContentLoaded', () => {
+          const lateBadge = document.getElementById('cv-status');
+          if (lateBadge) {
+            lateBadge.textContent = '✓ OpenCV';
+            lateBadge.classList.add('ready');
+          }
+        });
+      }
+    }
+  </script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
@@ -195,6 +213,7 @@
             <div class="settings-row">
               <label>Eşik: <input type="number" id="fillThreshold" value="0.20" min="0.1" max="0.9" step="0.02"></label>
               <label>Ceza: <input type="number" id="penalty" value="0.25" min="0" max="1" step="0.05"></label>
+              <label style="gap:4px;"><input type="checkbox" id="shadowMode"> Gölge modu</label>
             </div>
             <div class="log" id="cameraLog">Kaynak seçin ve formu yükleyin.</div>
           </div>
