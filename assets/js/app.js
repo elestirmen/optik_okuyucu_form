@@ -21,6 +21,8 @@ const BASE_FILL_MASK_RATIO = 0.32;
 const BASE_BLANK_GUARD = 0.18;
 let availableCameras = [];
 let preferredCameraId = null;
+const WARP_SKEW_LIMIT = 0.15; // genişlik/yükseklik fark oranı (daha sıkı)
+const WARP_AREA_MIN_RATIO = 0.10; // formun kapladığı alanın min oranı (daha sıkı)
 
 // =====================================================
 // INIT
@@ -269,6 +271,8 @@ function drawForm(cfg) {
   
   const letters = 'ABCDE'.split('').slice(0, cfg.choiceCount);
   const headerRepeatInterval = cfg.headerRepeat; // Her N soruda bir harf başlıkları tekrarla
+  const numberYOffset = Math.max(3, Math.round(cfg.bubbleSize * 0.35)); // sayı ile balon arasında orta seviye dikey boşluk
+  const numberXGap = Math.max(6, Math.round(cfg.bubbleSize * 0.4)); // sayı ile balon arasında yatay boşluk
   
   for (let col = 0; col < cfg.columnCount; col++) {
     const colX = margin + col * (columnWidth + columnGap);
@@ -310,7 +314,8 @@ function drawForm(cfg) {
       ctx.fillStyle = '#000';
       ctx.font = 'bold 9px Inter, sans-serif';
       ctx.textAlign = 'right';
-      ctx.fillText(qNum.toString(), colX + 18, qY + bubbleR + 3);
+      const numberX = labelStartX - bubbleR - numberXGap;
+      ctx.fillText(qNum.toString(), numberX, qY + bubbleR + numberYOffset);
       
       // Choice bubbles
       const choices = [];
@@ -580,6 +585,12 @@ function processFrame(isAuto) {
       if (!isAuto) setLog('omrLog', 'Köşe markerları bulunamadı', 'error');
       return;
     }
+    const warpCheck = checkWarpQuality(markers, src.cols, src.rows);
+    if (!warpCheck.ok) {
+      if (!isAuto) setLog('omrLog', `Eğim/alan kontrolü başarısız: ${warpCheck.reasons.join(', ')}`, 'error');
+      updateStatus('error', 'Eğim çok yüksek');
+      return;
+    }
     
     const warped = warpPerspective(src, markers);
   cv.imshow('warpCanvas', warped);
@@ -694,6 +705,24 @@ function warpPerspective(src, markers) {
   cv.warpPerspective(src, dst, M, new cv.Size(W, H));
   srcPts.delete(); dstPts.delete(); M.delete();
   return dst;
+}
+
+function checkWarpQuality(markers, imgW, imgH) {
+  const dist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
+  const wt = dist(markers.tl, markers.tr);
+  const wb = dist(markers.bl, markers.br);
+  const hl = dist(markers.tl, markers.bl);
+  const hr = dist(markers.tr, markers.br);
+  const avgW = (wt + wb) / 2;
+  const avgH = (hl + hr) / 2;
+  const areaRatio = (avgW * avgH) / (imgW * imgH);
+  const skewW = Math.abs(wt - wb) / Math.max(wt, wb);
+  const skewH = Math.abs(hl - hr) / Math.max(hl, hr);
+  const reasons = [];
+  if (skewW > WARP_SKEW_LIMIT) reasons.push(`Yatay eğiklik yüksek (${(skewW*100).toFixed(1)}%)`);
+  if (skewH > WARP_SKEW_LIMIT) reasons.push(`Dikey eğiklik yüksek (${(skewH*100).toFixed(1)}%)`);
+  if (areaRatio < WARP_AREA_MIN_RATIO) reasons.push(`Form alanı çok küçük (${(areaRatio*100).toFixed(1)}%)`);
+  return { ok: reasons.length === 0, reasons };
 }
 
 function analyzeBubbles(warpMat, debugDraw = true) {
@@ -1186,6 +1215,12 @@ function processAnswerKeyFrame() {
       setLog('cameraLog', '⚠️ Köşe markerları bulunamadı', 'error');
       return;
     }
+    const warpCheck = checkWarpQuality(markers, src.cols, src.rows);
+    if (!warpCheck.ok) {
+      setLog('cameraLog', `⚠️ Eğim/alan kontrolü başarısız: ${warpCheck.reasons.join(', ')}`, 'error');
+      updateStatus('error', 'Eğim çok yüksek');
+      return;
+    }
     
     const warped = warpPerspective(src, markers);
     cv.imshow('warpCanvas', warped);
@@ -1407,6 +1442,12 @@ function processStudentFormFromFile() {
     if (!markers) {
       setLog('cameraLog', '⚠️ Köşe markerları bulunamadı. Formun köşeleri görünür olmalı.', 'error');
       updateStatus('error', 'Marker bulunamadı');
+      return;
+    }
+    const warpCheck = checkWarpQuality(markers, src.cols, src.rows);
+    if (!warpCheck.ok) {
+      setLog('cameraLog', `⚠️ Eğim/alan kontrolü başarısız: ${warpCheck.reasons.join(', ')}`, 'error');
+      updateStatus('error', 'Eğim çok yüksek');
       return;
     }
     
