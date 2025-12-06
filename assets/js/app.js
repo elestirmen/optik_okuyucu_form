@@ -597,15 +597,10 @@ function processFrame(isAuto) {
 
   const result = analyzeBubbles(warped);
   renderResults(result);
+  safeAddSessionResult(result);
   if (result.suspicious) {
     updateStatus('error', 'Şüpheli okuma');
-    setLog('omrLog', `⚠️ Okuma şüpheli, kaydedilmedi: ${result.suspiciousReasons.join(', ')}`, 'error');
-  } else {
-    safeAddSessionResult(result);
-  }
-  
-  if (!result.suspicious && isAuto && result.correct + result.wrong > 0) {
-    toggleAutoScan();
+    setLog('omrLog', `⚠️ Okuma şüpheli: ${result.suspiciousReasons.join(', ')}`, 'error');
   }
     
     updateStatus('ready', '✓ Okundu');
@@ -913,19 +908,36 @@ function renderResults(r) {
 // SESSION LOG / EXPORT
 // =====================================================
 function addSessionResult(r) {
+  const studentKnown = r.studentNo && !r.studentNo.includes('?');
+  const studentKey = studentKnown ? r.studentNo : null;
+  const existingIdx = studentKey ? sessionResults.findIndex(e => e.studentNo === studentKey) : -1;
+  let entryId = sessionResults.length + 1;
+  if (existingIdx >= 0) {
+    entryId = sessionResults[existingIdx].id;
+  }
   const entry = {
-    id: sessionResults.length + 1,
-    studentNo: (r.studentNo && !r.studentNo.includes('?')) ? r.studentNo : 'Bilinmiyor',
+    id: entryId,
+    studentNo: studentKey || 'Bilinmiyor',
     correct: r.correct,
     wrong: r.wrong,
     blank: r.blank,
     multi: r.multi,
     net: r.net,
-    perQuestion: r.perQuestion.map(p => ({ ...p }))
+    perQuestion: r.perQuestion.map(p => ({ ...p })),
+    suspicious: !!r.suspicious,
+    suspiciousReasons: r.suspiciousReasons || []
   };
-  sessionResults.push(entry);
+  if (existingIdx >= 0) {
+    sessionResults[existingIdx] = entry;
+  } else {
+    sessionResults.push(entry);
+  }
+  // ID'leri sıralı tut
+  sessionResults = sessionResults
+    .sort((a, b) => a.id - b.id)
+    .map((e, idx) => ({ ...e, id: idx + 1 }));
   renderSessionList();
-  persistEntrySafely(entry);
+  persistAllEntriesSafely();
 }
 
 function renderSessionList() {
@@ -985,8 +997,9 @@ function downloadSessionCsv() {
 
 function formatEntryLine(entry, verbose = true) {
   const answers = (entry.perQuestion || []).map(p => `${p.q}:${p.marked || '-'}`).join(' ');
+  const susp = entry.suspicious ? 1 : 0;
   if (!verbose) {
-    return `#${entry.id}\t${entry.studentNo || 'Bilinmiyor'}\tD:${entry.correct}\tY:${entry.wrong}\tB:${entry.blank}\tCoklu:${entry.multi}\tNet:${entry.net}\t${answers}`;
+    return `#${entry.id}\t${entry.studentNo || 'Bilinmiyor'}\tD:${entry.correct}\tY:${entry.wrong}\tB:${entry.blank}\tCoklu:${entry.multi}\tNet:${entry.net}\tSupheli:${susp}\t${answers}`;
   }
   const answersVerbose = (entry.perQuestion || []).map(p => `${p.q}:${p.marked || '-'}/${p.status}`).join(' ');
   return [
@@ -997,6 +1010,7 @@ function formatEntryLine(entry, verbose = true) {
     `Bos: ${entry.blank}`,
     `Coklu: ${entry.multi}`,
     `Net: ${entry.net}`,
+    `Supheli: ${susp}`,
     `Cevaplar: ${answersVerbose}`
   ].join('\n');
 }
@@ -1053,9 +1067,24 @@ function fallbackDownloadLog() {
   URL.revokeObjectURL(url);
 }
 
-function persistEntrySafely(entry) {
-  // Mümkünse mevcut klasörde tek dosyaya ekle, aksi halde toplu log indir
-  appendEntryToLog(entry).then((ok) => {
+async function writeFullLog(entries) {
+  if (!fileSaveSupported) return false;
+  try {
+    const handle = await ensureLogFileHandle();
+    if (!handle) return false;
+    const writable = await handle.createWritable({ keepExistingData: false });
+    const lines = entries.map(e => formatEntryLine(e, false)).join('\\n') + '\\n';
+    await writable.write(lines);
+    await writable.close();
+    return true;
+  } catch (e) {
+    console.warn('Log yazma hatasi', e);
+    return false;
+  }
+}
+
+function persistAllEntriesSafely() {
+  writeFullLog(sessionResults).then((ok) => {
     if (!ok) fallbackDownloadLog();
   });
 }
@@ -1460,10 +1489,10 @@ function processStudentFormFromFile() {
       updateStatus('ready', 'Şüpheli okuma');
       setLog('cameraLog', `⚠️ Şüpheli okuma: ${result.suspiciousReasons.join(', ')}`, 'error');
     } else {
-      safeAddSessionResult(result);
       updateStatus('found', '✓ Form okundu!');
       setLog('cameraLog', '✅ Analiz tamamlandı!', 'success');
     }
+    safeAddSessionResult(result);
     
     warped.delete();
   } catch (e) {
