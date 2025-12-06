@@ -1,8 +1,0 @@
-Sira: 5
-OgrenciNo: 3448110638
-Dogru: 29
-Yanlis: 1
-Bos: 0
-Coklu: 1
-Net: 28.75
-Cevaplar: 1:B/Doğru 2:C/Doğru 3:C/Doğru 4:C/Doğru 5:B/Doğru 6:A/Doğru 7:B/Doğru 8:B/Doğru 9:B/Doğru 10:C/Doğru 11:D/Doğru 12:D/Doğru 13:D/Doğru 14:D/Doğru 15:D/Doğru 16:D/Doğru 17:C/Doğru 18:B/Doğru 19:A/Doğru 20:A/Doğru 21:A/Doğru 22:B/Doğru 23:C/Doğru 24:C/Doğru 25:C*/Yanlış 26:B/Doğru 27:C/Doğru 28:C/Doğru 29:C/Doğru 30:C/Doğru
