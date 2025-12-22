@@ -4,6 +4,7 @@ import { updateStatus, setLog } from '../utils/helpers.js';
 import { playSuccessChime } from './audio.js';
 import { renderResults, safeAddSessionResult } from '../features/results.js';
 import { initCamera, stopCamera, loadCameraDevices } from './camera.js';
+import jsQR from 'jsqr';
 // Removed circular dependencies or unused imports if any
 
 const BASE_FILL_ROI_SCALE = 1.04;
@@ -11,8 +12,13 @@ const BASE_FILL_MASK_RATIO = 0.32;
 const BASE_BLANK_GUARD = 0.18;
 const WARP_SKEW_LIMIT = 0.15;
 const WARP_AREA_MIN_RATIO = 0.10;
+const CAPTURE_MAX_DIM = 960;
+const BLUR_VAR_WARN = 25;
+const BLUR_VAR_REJECT = 12;
 
 let uploadedImage = null;
+let lastQrCheckAtMs = 0;
+let lastQrCorner = null;
 
 // ... (Previous exports: getPreprocessParams, preprocessToBinary, getFillParams - keep them) ...
 // I will rewrite the whole file to ensure completeness
@@ -54,6 +60,136 @@ export function getFillParams() {
         return { roiScale: 1.02, maskRatio: 0.30, blankGuard: 0.14 };
     }
     return { roiScale: BASE_FILL_ROI_SCALE, maskRatio: BASE_FILL_MASK_RATIO, blankGuard: BASE_BLANK_GUARD };
+}
+
+function estimateLaplacianVariance(srcMat) {
+    if (!cv?.Laplacian) return null;
+    const gray = new cv.Mat();
+    cv.cvtColor(srcMat, gray, cv.COLOR_RGBA2GRAY);
+
+    const maxSide = Math.max(gray.cols, gray.rows);
+    let work = gray;
+    let resized = null;
+    if (maxSide > 480) {
+        resized = new cv.Mat();
+        const scale = 480 / maxSide;
+        cv.resize(gray, resized, new cv.Size(0, 0), scale, scale, cv.INTER_AREA);
+        work = resized;
+    }
+
+    const lap = new cv.Mat();
+    cv.Laplacian(work, lap, cv.CV_64F);
+    const mean = new cv.Mat();
+    const stdDev = new cv.Mat();
+    cv.meanStdDev(lap, mean, stdDev);
+    const std = stdDev.data64F ? stdDev.data64F[0] : stdDev.doubleAt(0, 0);
+    const variance = std * std;
+
+    lap.delete();
+    mean.delete();
+    stdDev.delete();
+    if (resized) resized.delete();
+    gray.delete();
+
+    return variance;
+}
+
+function decodeQrFromRect(rgbaMat, rect) {
+    try {
+        const roi = rgbaMat.roi(rect);
+        const roiCopy = roi.clone();
+        roi.delete();
+
+        const data = new Uint8ClampedArray(
+            roiCopy.data.buffer,
+            roiCopy.data.byteOffset,
+            roiCopy.data.byteLength
+        );
+        const res = jsQR(data, roiCopy.cols, roiCopy.rows);
+        roiCopy.delete();
+
+        if (res?.data) return res;
+        return null;
+    } catch {
+        return null;
+    }
+}
+
+function findQrCorner(warpMat) {
+    if (!warpMat || !warpMat.cols || !warpMat.rows) return null;
+
+    const w = warpMat.cols;
+    const h = warpMat.rows;
+    const minSide = Math.min(w, h);
+
+    const pad = Math.max(4, Math.round(minSide * 0.04));
+    const maxPossible = Math.min(w - pad * 2, h - pad * 2);
+    const roiSize = Math.min(maxPossible, Math.max(120, Math.round(minSide * 0.32)));
+    if (roiSize < 80) return null;
+
+    const corners = [
+        { key: 'tr', x: w - roiSize - pad, y: pad },
+        { key: 'tl', x: pad, y: pad },
+        { key: 'br', x: w - roiSize - pad, y: h - roiSize - pad },
+        { key: 'bl', x: pad, y: h - roiSize - pad },
+    ];
+
+    for (const c of corners) {
+        const x = Math.max(0, Math.min(w - roiSize, Math.round(c.x)));
+        const y = Math.max(0, Math.min(h - roiSize, Math.round(c.y)));
+        const rect = new cv.Rect(x, y, roiSize, roiSize);
+        const decoded = decodeQrFromRect(warpMat, rect);
+        if (decoded?.data) return { corner: c.key, data: decoded.data };
+    }
+    return null;
+}
+
+function remapMarkersByQrCorner(markers, qrCorner) {
+    if (qrCorner === 'bl') {
+        // QR alt-sol -> form ters (180°)
+        return { tl: markers.br, tr: markers.bl, br: markers.tl, bl: markers.tr };
+    }
+    if (qrCorner === 'tl') {
+        // QR üst-sol -> form 90° sola dönük (düzelt: 90° sağ)
+        return { tl: markers.tr, tr: markers.tl, br: markers.bl, bl: markers.br };
+    }
+    if (qrCorner === 'br') {
+        // QR alt-sağ -> form 90° sağa dönük (düzelt: 90° sol)
+        return { tl: markers.bl, tr: markers.br, br: markers.tr, bl: markers.tl };
+    }
+    return markers;
+}
+
+function labelForQrCorner(qrCorner) {
+    if (qrCorner === 'bl') return '180°';
+    if (qrCorner === 'tl') return '90° sağ';
+    if (qrCorner === 'br') return '90° sol';
+    return '';
+}
+
+function warpPerspectiveWithQrCorrection(src, markers, forceQrCheck = true) {
+    const warped = warpPerspective(src, markers);
+    const now = Date.now();
+    if (!forceQrCheck && lastQrCorner === 'tr' && (now - lastQrCheckAtMs) < 2500) {
+        return { warped, corrected: false, rotationLabel: '' };
+    }
+
+    const qr = findQrCorner(warped);
+    lastQrCheckAtMs = now;
+    lastQrCorner = qr?.corner || null;
+    if (!qr || qr.corner === 'tr') return { warped, corrected: false, rotationLabel: '' };
+
+    const remapped = remapMarkersByQrCorner(markers, qr.corner);
+    const corrected = warpPerspective(src, remapped);
+    const qr2 = findQrCorner(corrected);
+    if (qr2 && qr2.corner === 'tr') {
+        lastQrCorner = 'tr';
+        warped.delete();
+        return { warped: corrected, corrected: true, rotationLabel: labelForQrCorner(qr.corner) };
+    }
+
+    corrected.delete();
+    return { warped, corrected: false, rotationLabel: '' };
 }
 
 function scoreBubble(binary, choice, w, h, roiScale, maskRatio, dx = 0, dy = 0) {
@@ -166,6 +302,14 @@ export function processFrame(isAuto) {
 
     try {
         src = cv.imread('captureCanvas');
+        const blurVar = estimateLaplacianVariance(src);
+        if (blurVar !== null && blurVar < BLUR_VAR_REJECT) {
+            updateStatus('error', 'Görüntü bulanık');
+            if (!isAuto) {
+                setLog('omrLog', `⚠️ Görüntü bulanık (netlik ${blurVar.toFixed(1)}). Telefonu sabitleyip tekrar deneyin.`, 'error');
+            }
+            return;
+        }
         binary = preprocessToBinary(src);
 
         markerOverlay = src.clone();
@@ -184,10 +328,19 @@ export function processFrame(isAuto) {
             return;
         }
 
-        const warped = warpPerspective(src, markers);
+        const warpOut = warpPerspectiveWithQrCorrection(src, markers, !isAuto);
+        const warped = warpOut.warped;
+        if (warpOut.corrected && !isAuto) {
+            setLog('omrLog', `↻ Form otomatik döndürüldü (${warpOut.rotationLabel}).`, 'info');
+        }
         cv.imshow('warpCanvas', warped);
 
         const result = analyzeBubbles(warped);
+        if (blurVar !== null && blurVar < BLUR_VAR_WARN) {
+            result.suspicious = true;
+            result.suspiciousReasons = result.suspiciousReasons || [];
+            result.suspiciousReasons.push(`Görüntü bulanık olabilir (netlik ${blurVar.toFixed(1)})`);
+        }
         renderResults(result);
         safeAddSessionResult(result);
         if (result.suspicious) {
@@ -218,8 +371,12 @@ export function captureAndProcess(isAuto = false) {
 
     const canvas = document.getElementById('captureCanvas');
     const ctx = canvas.getContext('2d');
-    canvas.width = Math.min(640, video.videoWidth);
-    canvas.height = Math.floor(canvas.width * video.videoHeight / video.videoWidth);
+    const vw = video.videoWidth || 0;
+    const vh = video.videoHeight || 0;
+    if (!vw || !vh) return;
+    const scale = Math.min(1, CAPTURE_MAX_DIM / Math.max(vw, vh));
+    canvas.width = Math.max(1, Math.floor(vw * scale));
+    canvas.height = Math.max(1, Math.floor(vh * scale));
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
     if (state.scanMode === 'answerKey') {
@@ -580,6 +737,12 @@ export function processAnswerKeyFrame() {
 
     try {
         src = cv.imread('captureCanvas');
+        const blurVar = estimateLaplacianVariance(src);
+        if (blurVar !== null && blurVar < BLUR_VAR_REJECT) {
+            setLog('cameraLog', `⚠️ Görüntü bulanık (netlik ${blurVar.toFixed(1)}). Telefonu sabitleyip tekrar deneyin.`, 'error');
+            updateStatus('error', 'Görüntü bulanık');
+            return;
+        }
         binary = preprocessToBinary(src);
 
         markerOverlay = src.clone();
@@ -597,7 +760,11 @@ export function processAnswerKeyFrame() {
             return;
         }
 
-        const warped = warpPerspective(src, markers);
+        const warpOut = warpPerspectiveWithQrCorrection(src, markers);
+        const warped = warpOut.warped;
+        if (warpOut.corrected) {
+            setLog('cameraLog', `↻ Form otomatik döndürüldü (${warpOut.rotationLabel}).`, 'info');
+        }
         cv.imshow('warpCanvas', warped);
 
         const result = readAnswerKeyFromScan(warped);
