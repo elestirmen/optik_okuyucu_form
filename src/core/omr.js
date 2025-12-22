@@ -96,31 +96,69 @@ function scoreChoices(binary, choices, w, h, roiScale, maskRatio) {
     return choices.map(c => ({ opt: c.option, score: scoreBubble(binary, c, w, h, roiScale, maskRatio) }));
 }
 
-function refineScoresIfNeeded(binary, choices, w, h, roiScale, maskRatio, baseScores, threshold) {
-    const baseMax = Math.max(...baseScores.map(s => s.score));
-    // Net boşlarda arama yapma; ama eşik altı belirsizlerde hizalama toleransı için küçük arama yap.
-    if (baseMax >= threshold || baseMax < 0.02) return baseScores;
+function scoreChoicesWithOffset(binary, choices, w, h, roiScale, maskRatio, dx, dy) {
+    return choices.map(c => ({ opt: c.option, score: scoreBubble(binary, c, w, h, roiScale, maskRatio, dx, dy) }));
+}
+
+function getScoreStats(scores, threshold) {
+    const sorted = [...scores].sort((a, b) => b.score - a.score);
+    const best = sorted[0] || { opt: '', score: 0 };
+    const second = sorted[1] || { opt: '', score: 0 };
+    const mean = scores.reduce((sum, s) => sum + s.score, 0) / Math.max(1, scores.length);
+    const filledCount = scores.filter(s => s.score >= threshold).length;
+    const gap = best.score - second.score;
+    return { sorted, best, second, mean, filledCount, gap };
+}
+
+function refineScoresIfNeeded(binary, choices, w, h, roiScale, maskRatio, baseScores, threshold, blankGuard) {
+    const baseStats = getScoreStats(baseScores, threshold);
+    const baseMax = baseStats.best.score;
+
+    if (baseMax < 0.02) return baseScores;
+
+    const shouldSearch =
+        (baseStats.filledCount > 1 && baseStats.gap < 0.08) ||
+        (baseMax >= blankGuard && baseMax < threshold);
+    if (!shouldSearch) return baseScores;
 
     const sample = choices[0];
     const roiW = Math.round(sample.width * w * roiScale);
     const roiH = Math.round(sample.height * h * roiScale);
-    const searchPx = Math.min(8, Math.max(2, Math.round(Math.min(roiW, roiH) * 0.35)));
+    const searchPx = Math.min(14, Math.max(3, Math.round(Math.min(roiW, roiH) * 0.45)));
     const half = Math.max(1, Math.round(searchPx / 2));
     const offsets = Array.from(new Set([-searchPx, -half, 0, half, searchPx]));
 
-    const refined = choices.map(c => {
-        let best = 0;
-        for (const dx of offsets) {
-            for (const dy of offsets) {
-                const s = scoreBubble(binary, c, w, h, roiScale, maskRatio, dx, dy);
-                if (s > best) best = s;
+    const metricFor = (stats) => {
+        // Daha büyük ayrım (best-second) ve daha az eşik üstü seçim => daha iyi.
+        return stats.gap * 2 + stats.best.score - Math.max(0, stats.filledCount - 1) * 0.25;
+    };
+
+    let bestScores = baseScores;
+    let bestStats = baseStats;
+    let bestMetric = metricFor(baseStats);
+
+    for (const dx of offsets) {
+        for (const dy of offsets) {
+            if (dx === 0 && dy === 0) continue;
+            const scores = scoreChoicesWithOffset(binary, choices, w, h, roiScale, maskRatio, dx, dy);
+            const stats = getScoreStats(scores, threshold);
+            const metric = metricFor(stats);
+            if (metric > bestMetric + 0.02) {
+                bestMetric = metric;
+                bestScores = scores;
+                bestStats = stats;
             }
         }
-        return { opt: c.option, score: best };
-    });
+    }
 
-    const refinedMax = Math.max(...refined.map(s => s.score));
-    return refinedMax > baseMax + 0.03 ? refined : baseScores;
+    // Kazanım yoksa veya kötüleşiyorsa bırak.
+    if (bestScores === baseScores) return baseScores;
+
+    if (bestStats.filledCount < baseStats.filledCount) return bestScores;
+    if (bestStats.gap > baseStats.gap + 0.05) return bestScores;
+    if (baseMax < threshold && bestStats.best.score > baseMax + 0.03) return bestScores;
+
+    return baseScores;
 }
 
 export function processFrame(isAuto) {
@@ -454,35 +492,37 @@ export function analyzeBubbles(warpMat, debugDraw = true) {
 
     for (const q of questions) {
         let scores = scoreChoices(binary, q.choices, w, h, fillParams.roiScale, fillParams.maskRatio);
-        scores = refineScoresIfNeeded(binary, q.choices, w, h, fillParams.roiScale, fillParams.maskRatio, scores, threshold);
+        scores = refineScoresIfNeeded(binary, q.choices, w, h, fillParams.roiScale, fillParams.maskRatio, scores, threshold, blankGuard);
 
-        const maxScore = Math.max(...scores.map(s => s.score));
+        const stats = getScoreStats(scores, threshold);
+        const maxScore = stats.best.score;
         if (maxScore < blankGuard) {
             blank++;
             perQuestion.push({ q: q.questionNumber, marked: '-', status: 'Boş', maxScore: maxScore.toFixed(2) });
             continue;
         }
 
-        const filled = scores.filter(s => s.score >= threshold);
-
         let status = 'Boş';
         let candidate = null;
         let markedLabel = '-';
 
-        if (filled.length === 0 && maxScore > 0.05) {
-            const sortedScores = [...scores].sort((a, b) => b.score - a.score);
-            const best = sortedScores[0];
-            const second = sortedScores[1];
+        const best = stats.best;
+        const second = stats.second;
+
+        if (best.score < threshold && maxScore > 0.05) {
             if (best.score > second.score * 1.5 || (best.score > 0.1 && best.score > second.score * 1.3)) {
                 candidate = best;
             }
-        } else if (filled.length > 1) {
-            candidate = filled.reduce((a, b) => (a.score >= b.score ? a : b));
-            if (candidate) markedLabel = candidate.opt + '*';
-            multi++;
-            suspiciousReasons.push(`S${q.questionNumber}: çoklu işaret`);
-        } else if (filled.length === 1) {
-            candidate = filled[0];
+        } else if (best.score >= threshold) {
+            candidate = best;
+            const multiSecondMin = threshold + 0.06;
+            const multiClose = second.score >= threshold && (second.score >= best.score * 0.88 || stats.gap < 0.06);
+            const isMulti = second.score >= multiSecondMin && multiClose;
+            if (isMulti) {
+                markedLabel = candidate.opt + '*';
+                multi++;
+                suspiciousReasons.push(`S${q.questionNumber}: çoklu işaret`);
+            }
         }
 
         if (candidate) {
@@ -600,7 +640,7 @@ function readAnswerKeyFromScan(warpMat) {
 
     for (const q of questions) {
         let scores = scoreChoices(binary, q.choices, w, h, roiScale, fillParams.maskRatio);
-        scores = refineScoresIfNeeded(binary, q.choices, w, h, roiScale, fillParams.maskRatio, scores, threshold);
+        scores = refineScoresIfNeeded(binary, q.choices, w, h, roiScale, fillParams.maskRatio, scores, threshold, blankGuard);
 
         const maxScore = Math.max(...scores.map(s => s.score));
         if (maxScore < blankGuard) continue;
@@ -609,6 +649,18 @@ function readAnswerKeyFromScan(warpMat) {
         if (filled.length === 1) {
             answers[q.questionNumber] = filled[0].opt;
             successCount++;
+        }
+        else if (filled.length > 1) {
+            const sorted = [...filled].sort((a, b) => b.score - a.score);
+            const best = sorted[0];
+            const second = sorted[1];
+            const multiSecondMin = threshold + 0.06;
+            const multiClose = second.score >= threshold && (second.score >= best.score * 0.88 || (best.score - second.score) < 0.06);
+            const isMulti = second.score >= multiSecondMin && multiClose;
+            if (!isMulti) {
+                answers[q.questionNumber] = best.opt;
+                successCount++;
+            }
         }
         else if (filled.length === 0 && maxScore >= Math.max(fillParams.blankGuard, threshold * 0.6)) {
             const best = scores.find(s => s.score === maxScore);
