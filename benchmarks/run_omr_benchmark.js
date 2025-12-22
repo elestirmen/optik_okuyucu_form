@@ -12,7 +12,7 @@ const path = require('path');
 const { chromium } = require('playwright');
 
 const ROOT = path.resolve(__dirname, '..');
-const INDEX_URL = 'file://' + path.join(ROOT, 'index.html');
+const INDEX_URL = 'http://localhost:4173/';
 const RESULTS_CSV = path.join(ROOT, 'benchmarks', 'results.csv');
 const BASE_KEY_IMG = path.join(ROOT, 'benchmarks', 'input', 'filled-base.png');
 

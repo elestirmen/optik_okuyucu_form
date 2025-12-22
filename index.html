@@ -1,38 +1,82 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Optik Form Tasarla & Oku - Pro</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="assets/css/styles.css">
-  
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="/css/styles.css">
+
   <script>
     window.cvReady = false;
+    let cdnFallbackTriggered = false;
+
     function onOpenCvReady() {
+      if (window.cvReady) return; // Prevent double init
       window.cvReady = true;
+      console.log('OpenCV loaded successfully.');
       const badge = document.getElementById('cv-status');
       if (badge) {
         badge.textContent = '✓ OpenCV';
+        badge.classList.remove('error');
         badge.classList.add('ready');
-      } else {
-        document.addEventListener('DOMContentLoaded', () => {
-          const lateBadge = document.getElementById('cv-status');
-          if (lateBadge) {
-            lateBadge.textContent = '✓ OpenCV';
-            lateBadge.classList.add('ready');
-          }
-        });
+        badge.title = "OpenCV hazır.";
       }
     }
+
+    function loadOpenCvCdn() {
+      if (cdnFallbackTriggered || window.cvReady) return;
+      cdnFallbackTriggered = true;
+
+      console.warn("Local OpenCV failed or timed out. Attempting to load from CDN...");
+      const badge = document.getElementById('cv-status');
+      if (badge) {
+        badge.innerHTML = '<span style="color:var(--warn)">☁️ CDN...</span>';
+        badge.title = "Yerel dosya yüklenemedi, buluttan indiriliyor...";
+      }
+
+      const script = document.createElement('script');
+      script.src = "https://docs.opencv.org/4.8.0/opencv.js";
+      script.async = true;
+      script.onload = () => {
+        // OpenCV.js execution sets onRuntimeInitialized callback
+        if (cv['onRuntimeInitialized']) {
+          // If already set by previous attempt, we might need to wait or it might trigger automatically.
+          // However, usually we just ensure our callback is the one registered.
+          cv['onRuntimeInitialized'] = onOpenCvReady;
+        } else {
+          // Basic fallback if async nature missed the set
+          cv['onRuntimeInitialized'] = onOpenCvReady;
+        }
+      };
+      script.onerror = () => {
+        console.error("CDN OpenCV also failed.");
+        if (badge) {
+          badge.innerHTML = '<span style="color:var(--error)">⚠️ Hata</span>';
+          badge.title = "OpenCV ne yerel ne de CDN üzerinden yüklenemedi. Lütfen interneti kontrol edin.";
+        }
+      };
+      document.head.appendChild(script);
+    }
+
+    // Timeout check - trigger CDN if too slow
+    setTimeout(() => {
+      if (!window.cvReady && !cdnFallbackTriggered) {
+        loadOpenCvCdn();
+      }
+    }, 4000); // Try CDN after 4 seconds if local is stuck
   </script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script async src="https://docs.opencv.org/4.x/opencv.js" onload="cv['onRuntimeInitialized']=onOpenCvReady;"></script>
+  <!-- Local OpenCV -->
+  <script async src="/libs/opencv.js" onload="cv['onRuntimeInitialized']=onOpenCvReady;"
+    onerror="loadOpenCvCdn()"></script>
+  <script type="module" crossorigin src="/assets/index-B8IrSGt1.js"></script>
 </head>
+
 <body>
   <div class="app">
     <header class="no-print">
@@ -51,7 +95,7 @@
           <div class="card">
             <h3>⚙️ Form Ayarları</h3>
             <div class="hint">Kompakt optik form tasarımı - tüm boyutlar ayarlanabilir</div>
-            
+
             <div class="param-grid">
               <div><label>Soru Sayısı</label><input type="number" id="questionCount" min="1" max="200" value="30"></div>
               <div><label>Şık Sayısı</label>
@@ -75,14 +119,19 @@
                   <option value="no">Gizle</option>
                 </select>
               </div>
-              <div><label>Anahtar Şık</label><input type="number" id="answerKeyChoices" min="4" max="10" value="10"></div>
+              <div><label>Anahtar Şık</label><input type="number" id="answerKeyChoices" min="4" max="10" value="10">
+              </div>
             </div>
-            
+
             <div class="param-grid" style="margin-top:8px;">
-              <div><label>Form Genişlik (px)</label><input type="number" id="formWidth" min="300" max="1200" value="350" step="50"></div>
-              <div><label>Form Yükseklik (px)</label><input type="number" id="formHeight" min="400" max="2000" value="600" step="50"></div>
-              <div><label>Baloncuk Boyutu</label><input type="number" id="bubbleSize" min="8" max="24" value="15" step="1"></div>
-              <div><label>Satır Aralığı</label><input type="number" id="rowGap" min="1" max="20" value="4" step="1"></div>
+              <div><label>Form Genişlik (px)</label><input type="number" id="formWidth" min="300" max="1200" value="350"
+                  step="50"></div>
+              <div><label>Form Yükseklik (px)</label><input type="number" id="formHeight" min="400" max="2000"
+                  value="600" step="50"></div>
+              <div><label>Baloncuk Boyutu</label><input type="number" id="bubbleSize" min="8" max="24" value="15"
+                  step="1"></div>
+              <div><label>Satır Aralığı</label><input type="number" id="rowGap" min="1" max="20" value="4" step="1">
+              </div>
               <div><label>Kalite Çarpanı</label>
                 <select id="qualityScale">
                   <option value="1">1x (Hızlı)</option>
@@ -91,21 +140,22 @@
                   <option value="4">4x (Çok Yüksek)</option>
                 </select>
               </div>
-              <div><label>Harf Tekrar (soru)</label><input type="number" id="headerRepeat" min="3" max="20" value="5" step="1"></div>
+              <div><label>Harf Tekrar (soru)</label><input type="number" id="headerRepeat" min="3" max="20" value="5"
+                  step="1"></div>
             </div>
-            
+
             <div class="param-grid" style="margin-top:8px;">
               <div><label>Sınav Kodu</label><input type="text" id="examId" value="SINAV-001"></div>
               <div><label>Web Adresi</label><input type="text" id="webUrl" value="optikform.com"></div>
             </div>
-            
+
             <div class="btn-group">
               <button class="btn" id="refreshBtn">🔄 Oluştur</button>
               <button class="btn secondary" id="downloadPngBtn">📥 PNG İndir</button>
               <button class="btn secondary" id="downloadPdfBtn">🖨️ Yazdır</button>
             </div>
           </div>
-          
+
           <div class="card">
             <h3>👁️ Önizleme</h3>
             <div class="hint">Form canvas üzerine çizilir - PNG olarak indirilebilir</div>
@@ -122,7 +172,7 @@
           <div class="card">
             <h3>🔑 Cevap Anahtarı</h3>
             <div class="hint">Cevap anahtarını manuel girin veya form tarayarak yükleyin</div>
-            
+
             <div class="param-grid" style="margin-bottom:10px;">
               <div>
                 <label>Anahtar Kaynağı</label>
@@ -136,34 +186,38 @@
                 <input type="number" id="answerKeyCount" min="1" max="200" value="30">
               </div>
             </div>
-            
+
             <div id="manualKeySection">
               <div class="btn-group" style="margin-bottom:8px;">
-                <button class="btn secondary" id="generateKeyGridBtn" style="padding:6px 12px;font-size:11px;">📋 Anahtar Tablosu Oluştur</button>
-                <button class="btn secondary" id="clearKeyBtn" style="padding:6px 12px;font-size:11px;">🗑️ Temizle</button>
-                <button class="btn secondary" id="randomKeyBtn" style="padding:6px 12px;font-size:11px;">🎲 Rastgele</button>
+                <button class="btn secondary" id="generateKeyGridBtn" style="padding:6px 12px;font-size:11px;">📋
+                  Anahtar Tablosu Oluştur</button>
+                <button class="btn secondary" id="clearKeyBtn" style="padding:6px 12px;font-size:11px;">🗑️
+                  Temizle</button>
+                <button class="btn secondary" id="randomKeyBtn" style="padding:6px 12px;font-size:11px;">🎲
+                  Rastgele</button>
               </div>
               <div class="answer-key-grid" id="answerKeyGrid">
                 <!-- Dinamik olarak oluşturulacak -->
               </div>
             </div>
-            
+
             <div id="scanKeySection" style="display:none;">
               <div class="btn-group">
                 <button class="btn" id="scanKeyBtn">📷 Cevap Anahtarı Tara</button>
               </div>
-              <div class="hint" style="margin-top:8px;">Cevap anahtarı formunu tarayın. İşaretli cevaplar otomatik kaydedilecek.</div>
+              <div class="hint" style="margin-top:8px;">Cevap anahtarı formunu tarayın. İşaretli cevaplar otomatik
+                kaydedilecek.</div>
             </div>
-            
+
             <div class="answer-key-status empty" id="answerKeyStatus">
               ⚠️ Cevap anahtarı henüz girilmedi
             </div>
           </div>
-          
+
           <div class="card">
             <h3>📷 Form Okuma</h3>
             <div class="hint">Kamera veya dosyadan resim yükleyerek formu okuyun</div>
-            
+
             <div class="param-grid" style="margin-bottom:10px;">
               <div>
                 <label>Kaynak</label>
@@ -181,13 +235,15 @@
                 </select>
               </div>
             </div>
-            
+
             <!-- Kamera Bölümü -->
             <div id="cameraSection">
               <div class="video-wrap">
                 <video id="video" playsinline></video>
                 <div class="overlay"></div>
-                <div class="scan-status" id="scanStatus"><div class="dot"></div><span id="scanStatusText">Bekleniyor</span></div>
+                <div class="scan-status" id="scanStatus">
+                  <div class="dot"></div><span id="scanStatusText">Bekleniyor</span>
+                </div>
               </div>
               <div class="btn-group">
                 <button class="btn" id="startCameraBtn">📷 Kamerayı Başlat</button>
@@ -195,10 +251,11 @@
                 <button class="btn secondary" id="autoScanBtn">🔄 Otomatik</button>
               </div>
             </div>
-            
+
             <!-- Dosya Yükleme Bölümü -->
             <div id="fileSection" style="display:none;">
-              <div style="border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;margin-bottom:10px;">
+              <div
+                style="border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;margin-bottom:10px;">
                 <input type="file" id="fileInput" accept="image/*" style="display:none;">
                 <button class="btn" onclick="document.getElementById('fileInput').click()">📁 Resim Seç</button>
                 <div class="hint" style="margin-top:8px;">PNG, JPG veya JPEG formatında form resmi yükleyin</div>
@@ -209,7 +266,7 @@
                 <button class="btn secondary" id="clearFileBtn" style="display:none;">🗑️ Temizle</button>
               </div>
             </div>
-            
+
             <div class="settings-row">
               <label>Eşik: <input type="number" id="fillThreshold" value="0.20" min="0.1" max="0.9" step="0.02"></label>
               <label>Ceza: <input type="number" id="penalty" value="0.25" min="0" max="1" step="0.05"></label>
@@ -217,27 +274,48 @@
             </div>
             <div class="log" id="cameraLog">Kaynak seçin ve formu yükleyin.</div>
           </div>
-          
+
           <div class="card">
             <h3>📊 Sonuçlar</h3>
             <div class="canvas-row">
-              <div class="canvas-item"><div class="label">Yakalanan</div><canvas id="captureCanvas" class="process-canvas"></canvas></div>
-              <div class="canvas-item"><div class="label">Marker</div><canvas id="markerCanvas" class="process-canvas"></canvas></div>
-              <div class="canvas-item"><div class="label">Düzeltilmiş</div><canvas id="warpCanvas" class="process-canvas"></canvas></div>
+              <div class="canvas-item">
+                <div class="label">Yakalanan</div><canvas id="captureCanvas" class="process-canvas"></canvas>
+              </div>
+              <div class="canvas-item">
+                <div class="label">Marker</div><canvas id="markerCanvas" class="process-canvas"></canvas>
+              </div>
+              <div class="canvas-item">
+                <div class="label">Düzeltilmiş</div><canvas id="warpCanvas" class="process-canvas"></canvas>
+              </div>
             </div>
             <div class="result-box" id="omrResult">
               <div class="summary">
-                <div class="stat correct"><div class="stat-value">-</div><div class="stat-label">Doğru</div></div>
-                <div class="stat wrong"><div class="stat-value">-</div><div class="stat-label">Yanlış</div></div>
-                <div class="stat"><div class="stat-value">-</div><div class="stat-label">Boş</div></div>
-                <div class="stat net"><div class="stat-value">-</div><div class="stat-label">Net</div></div>
+                <div class="stat correct">
+                  <div class="stat-value">-</div>
+                  <div class="stat-label">Doğru</div>
+                </div>
+                <div class="stat wrong">
+                  <div class="stat-value">-</div>
+                  <div class="stat-label">Yanlış</div>
+                </div>
+                <div class="stat">
+                  <div class="stat-value">-</div>
+                  <div class="stat-label">Boş</div>
+                </div>
+                <div class="stat net">
+                  <div class="stat-value">-</div>
+                  <div class="stat-label">Net</div>
+                </div>
               </div>
               <div class="result-details" id="resultDetails">Sonuçlar burada...</div>
             </div>
             <div class="btn-group" style="margin-top:10px;">
-              <button class="btn secondary" id="downloadTxtBtn" style="padding:6px 10px;font-size:11px;">TXT Listesi</button>
-              <button class="btn secondary" id="downloadCsvBtn" style="padding:6px 10px;font-size:11px;">Excel (CSV)</button>
-              <button class="btn secondary" id="downloadXlsxBtn" style="padding:6px 10px;font-size:11px;">Excel (XLSX)</button>
+              <button class="btn secondary" id="downloadTxtBtn" style="padding:6px 10px;font-size:11px;">TXT
+                Listesi</button>
+              <button class="btn secondary" id="downloadCsvBtn" style="padding:6px 10px;font-size:11px;">Excel
+                (CSV)</button>
+              <button class="btn secondary" id="downloadXlsxBtn" style="padding:6px 10px;font-size:11px;">Excel
+                (XLSX)</button>
               <span id="sessionCount" style="font-size:11px;color:var(--muted);">0 kayit</span>
             </div>
             <div class="result-details" id="sessionList">Henuz kayit yok.</div>
@@ -247,6 +325,6 @@
       </section>
     </main>
   </div>
-  <script src="assets/js/app.js"></script>
 </body>
+
 </html>
