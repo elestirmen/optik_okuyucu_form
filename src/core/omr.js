@@ -12,7 +12,7 @@ const BASE_FILL_MASK_RATIO = 0.32;
 const BASE_BLANK_GUARD = 0.18;
 const WARP_SKEW_LIMIT = 0.15;
 const WARP_AREA_MIN_RATIO = 0.10;
-const CAPTURE_MAX_DIM = 960;
+const CAPTURE_MAX_DIM = 1280;
 const BLUR_VAR_WARN = 25;
 const BLUR_VAR_REJECT = 12;
 
@@ -241,9 +241,20 @@ function getScoreStats(scores, threshold) {
     const best = sorted[0] || { opt: '', score: 0 };
     const second = sorted[1] || { opt: '', score: 0 };
     const mean = scores.reduce((sum, s) => sum + s.score, 0) / Math.max(1, scores.length);
+    const median = sorted[Math.floor(sorted.length / 2)]?.score ?? mean;
     const filledCount = scores.filter(s => s.score >= threshold).length;
     const gap = best.score - second.score;
-    return { sorted, best, second, mean, filledCount, gap };
+    return { sorted, best, second, mean, median, filledCount, gap };
+}
+
+function getAdaptiveFillThreshold(stats, baseThreshold) {
+    // Zoom/tele kameralarda (daha karanlık + gürültülü görüntü) baloncuk çizgileri
+    // merkez maskeye taşabiliyor ve "boş" sorular bile eşiği geçebiliyor.
+    // Bu durumda, soruya özel taban (median) üstüne marj ekleyip eşiği yükseltiyoruz.
+    const median = stats?.median ?? 0;
+    const baselineHigh = median >= 0.12 && median >= baseThreshold * 0.8;
+    if (!baselineHigh) return baseThreshold;
+    return Math.min(0.9, Math.max(baseThreshold, median + 0.06));
 }
 
 function refineScoresIfNeeded(binary, choices, w, h, roiScale, maskRatio, baseScores, threshold, blankGuard) {
@@ -652,6 +663,7 @@ export function analyzeBubbles(warpMat, debugDraw = true) {
         scores = refineScoresIfNeeded(binary, q.choices, w, h, fillParams.roiScale, fillParams.maskRatio, scores, threshold, blankGuard);
 
         const stats = getScoreStats(scores, threshold);
+        const thresholdEff = getAdaptiveFillThreshold(stats, threshold);
         const maxScore = stats.best.score;
         if (maxScore < blankGuard) {
             blank++;
@@ -666,19 +678,26 @@ export function analyzeBubbles(warpMat, debugDraw = true) {
         const best = stats.best;
         const second = stats.second;
 
-        if (best.score < threshold && maxScore > 0.05) {
+        if (best.score < thresholdEff && maxScore > 0.05) {
             if (best.score > second.score * 1.5 || (best.score > 0.1 && best.score > second.score * 1.3)) {
                 candidate = best;
             }
-        } else if (best.score >= threshold) {
-            candidate = best;
-            const multiSecondMin = threshold + 0.06;
+        } else if (best.score >= thresholdEff) {
+            const multiSecondMin = Math.max(threshold + 0.06, thresholdEff);
             const multiClose = second.score >= threshold && (second.score >= best.score * 0.88 || stats.gap < 0.06);
             const isMulti = second.score >= multiSecondMin && multiClose;
             if (isMulti) {
+                candidate = best;
                 markedLabel = candidate.opt + '*';
                 multi++;
                 suspiciousReasons.push(`S${q.questionNumber}: çoklu işaret`);
+            } else {
+                const baseline = stats.median ?? 0;
+                const clearGap = stats.gap >= 0.06 || best.score >= second.score * 1.25;
+                const clearAboveBaseline = (best.score - baseline) >= 0.10;
+                if (clearGap || clearAboveBaseline) {
+                    candidate = best;
+                }
             }
         }
 
@@ -689,7 +708,7 @@ export function analyzeBubbles(warpMat, debugDraw = true) {
             if (status === 'Doğru') correct++; else wrong++;
         } else {
             blank++;
-            if (maxScore >= threshold * 0.6) {
+            if (maxScore >= thresholdEff * 0.6) {
                 suspiciousReasons.push(`S${q.questionNumber}: belirsiz işaret (skor ${maxScore.toFixed(2)})`);
             }
         }
@@ -809,9 +828,11 @@ function readAnswerKeyFromScan(warpMat) {
         let scores = scoreChoices(binary, q.choices, w, h, roiScale, fillParams.maskRatio);
         scores = refineScoresIfNeeded(binary, q.choices, w, h, roiScale, fillParams.maskRatio, scores, threshold, blankGuard);
 
-        const maxScore = Math.max(...scores.map(s => s.score));
+        const stats = getScoreStats(scores, threshold);
+        const thresholdEff = getAdaptiveFillThreshold(stats, threshold);
+        const maxScore = stats.best.score;
         if (maxScore < blankGuard) continue;
-        const filled = scores.filter(s => s.score >= threshold);
+        const filled = scores.filter(s => s.score >= thresholdEff);
 
         if (filled.length === 1) {
             answers[q.questionNumber] = filled[0].opt;
@@ -821,12 +842,17 @@ function readAnswerKeyFromScan(warpMat) {
             const sorted = [...filled].sort((a, b) => b.score - a.score);
             const best = sorted[0];
             const second = sorted[1];
-            const multiSecondMin = threshold + 0.06;
+            const multiSecondMin = Math.max(threshold + 0.06, thresholdEff);
             const multiClose = second.score >= threshold && (second.score >= best.score * 0.88 || (best.score - second.score) < 0.06);
             const isMulti = second.score >= multiSecondMin && multiClose;
             if (!isMulti) {
-                answers[q.questionNumber] = best.opt;
-                successCount++;
+                const baseline = stats.median ?? 0;
+                const clearGap = (best.score - second.score) >= 0.06 || best.score >= second.score * 1.25;
+                const clearAboveBaseline = (best.score - baseline) >= 0.10;
+                if (clearGap || clearAboveBaseline) {
+                    answers[q.questionNumber] = best.opt;
+                    successCount++;
+                }
             }
         }
         else if (filled.length === 0 && maxScore >= Math.max(fillParams.blankGuard, threshold * 0.6)) {
