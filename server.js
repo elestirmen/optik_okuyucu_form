@@ -13,14 +13,14 @@ if (!fs.existsSync(DIST_DIR)) {
 // Statik dosyaları serve et (production build)
 app.use(express.static(DIST_DIR));
 
-// Ana sayfa ve diğer route'lar için index.html
-app.get('*', (req, res) => {
-    res.sendFile(path.join(DIST_DIR, 'index.html'));
-});
-
 // Health check endpoint
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Ana sayfa ve diğer route'lar için index.html
+app.get('*', (req, res) => {
+    res.sendFile(path.join(DIST_DIR, 'index.html'));
 });
 
 app.listen(PORT, () => {

@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "start": "vite",
+    "serve": "node server.js",
     "deploy:static": "bash scripts/deploy_static.sh"
   },
   "keywords": [
@@ -23,7 +24,7 @@
     "express": "^4.18.2"
   },
   "engines": {
-    "node": ">=14.0.0"
+    "node": "^18.0.0 || >=20.0.0"
   },
   "devDependencies": {
     "jsqr": "^1.4.0",

@@ -3,8 +3,8 @@
 Modern, kullanıcı dostu bir optik form tasarlama ve okuma uygulaması. Canvas tabanlı form oluşturma, yüksek kaliteli PNG çıktısı ve gelişmiş kamera tabanlı OMR okuma özellikleri sunar.
 
 [![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)](package.json)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Node](https://img.shields.io/badge/node-%3E%3D14.0.0-brightgreen.svg)](package.json)
+[![License](https://img.shields.io/badge/license-MIT-green.svg)](package.json)
+[![Node](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](package.json)
 
 ---
 
@@ -89,7 +89,7 @@ Optik Form Pro, eğitim kurumları, işletmeler ve araştırmacılar için tasar
 
 ### Minimum Gereksinimler
 
-- **Node.js**: >= 14.0.0
+- **Node.js**: 18.x (veya >= 20.0.0)
 - **npm**: Herhangi bir versiyon (Node.js ile birlikte gelir)
 - **Modern Web Tarayıcı**: Chrome, Firefox, Safari veya Edge
 - **Kamera**: OMR okuma için (opsiyonel, dosyadan okuma da mümkün)
@@ -102,7 +102,7 @@ Terminal veya komut satırını açın ve şu komutları çalıştırın:
 ```bash
 # Node.js versiyonunu kontrol edin
 node --version
-# v14.0.0 veya üzeri olmalı
+# v18.0.0 veya üzeri olmalı (Node 20+ önerilir)
 
 # npm versiyonunu kontrol edin
 npm --version
@@ -1002,7 +1002,7 @@ Tam Excel dosyası, şu sütunlarla:
 - **HTML5 Canvas**: Form çizimi ve render
 - **OpenCV.js**: Görüntü işleme ve OMR analizi
 - **jsQR**: QR kod okuma
-- **QRCode.js**: QR kod oluşturma
+- **qrcode**: QR kod oluşturma
 - **SheetJS (XLSX)**: Excel dosya oluşturma
 - **Vite**: Build tool ve development server
 
@@ -1013,10 +1013,9 @@ Tam Excel dosyası, şu sütunlarla:
 
 #### CDN Kütüphaneleri
 
-- OpenCV.js: `https://docs.opencv.org/4.x/opencv.js`
-- jsQR: `https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js`
-- QRCode.js: `https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js`
-- SheetJS: `https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js`
+- OpenCV.js (fallback): `https://docs.opencv.org/4.8.0/opencv.js`
+- qrcode (opsiyonel fallback): `https://cdn.jsdelivr.net/npm/qrcode@1.5.4/+esm`
+- xlsx (opsiyonel fallback): `https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm`
 
 ### OMR Algoritması - Detaylı Açıklama
 
@@ -1409,7 +1408,7 @@ normalizedY = (pixelY - markerTop) / (markerBottom - markerTop)
 
 1. **Farklı Port Kullan**
    ```bash
-   PORT=8080 npm start
+   npm run dev -- --port 8080
    ```
 
 2. **Kullanan Process'i Bul**
@@ -1449,7 +1448,7 @@ normalizedY = (pixelY - markerTop) / (markerBottom - markerTop)
    ```
 
 3. **Node.js Versiyonu**
-   - Node.js >= 14.0.0 olmalı
+   - Node.js 18.x (veya >= 20.0.0) olmalı
    - Versiyonu kontrol edin: `node --version`
    - Güncelleyin: [nodejs.org](https://nodejs.org/)
 
@@ -1578,6 +1577,15 @@ C: Düşük kalite kullanın, otomatik taramayı kapatın, Chrome kullanın, otu
 
 ### Express Sunucusu
 
+Bu sunucu **opsiyoneldir** ve `dist/` çıktısını servis eder.
+
+```bash
+# Production build al
+npm run build
+# dist/ klasörünü Express ile servis et
+npm run serve
+```
+
 #### GET `/`
 - **Açıklama**: Ana sayfa (index.html)
 - **Response**: HTML dosyası
@@ -1605,7 +1613,7 @@ C: Düşük kalite kullanın, otomatik taramayı kapatın, Chrome kullanın, otu
 - **Environment Variable**: `PORT` ile değiştirilebilir
 - **Örnek**: 
   ```bash
-  PORT=8080 npm start
+  PORT=8080 npm run serve
   ```
 
 ---
@@ -1664,7 +1672,7 @@ python3 benchmarks/select_best.py --csv benchmarks/results.csv
 
 ```bash
 pip install opencv-python numpy
-npm install playwright
+npm install
 ```
 
 ---
@@ -1725,7 +1733,7 @@ npm install playwright
 
 ## 📄 Lisans
 
-Bu proje [MIT Lisansı](LICENSE) altında lisanslanmıştır ve özgürce kullanılabilir.
+Bu proje MIT lisansı altında lisanslanmıştır ve özgürce kullanılabilir.
 
 ---
 
