@@ -5,5 +5,12 @@ export const state = {
     autoScanInterval: null,
     isAutoScanning: false,
     scanMode: 'student', // 'student' or 'answerKey'
-    shadowMode: false
+    shadowMode: false,
+    // Yeni özellikler
+    alignmentGuideEnabled: true,
+    autoTuneEnabled: true,
+    multiReadEnabled: false,
+    lastImageQuality: null,
+    preferredCameraId: null,
+    availableCameras: []
 };

@@ -44,7 +44,10 @@ export function addSessionResult(r) {
         net: r.net,
         perQuestion: r.perQuestion.map(p => ({ ...p })),
         suspicious: !!r.suspicious,
-        suspiciousReasons: r.suspiciousReasons || []
+        suspiciousReasons: r.suspiciousReasons || [],
+        confidenceSummary: r.confidenceSummary || null,
+        imageQuality: r.imageQuality || null,
+        anomalies: r.anomalies || []
     };
     if (existingIdx >= 0) {
         sessionResults[existingIdx] = entry;
@@ -73,13 +76,49 @@ export function renderResults(r) {
     document.querySelector('.stat.net .stat-value').textContent = r.net;
 
     let html = r.studentNo ? `<div style="margin-bottom:8px;border-bottom:1px solid var(--border);padding-bottom:6px;"><b>Öğrenci No:</b> ${r.studentNo}</div>` : '';
+    
+    // Confidence özeti göster
+    if (r.confidenceSummary) {
+        const cs = r.confidenceSummary;
+        const overallColor = cs.overallLevel === 'HIGH' ? '#10b981' : cs.overallLevel === 'MEDIUM' ? '#f59e0b' : '#ef4444';
+        html += `<div style="margin-bottom:8px;padding:6px 8px;background:var(--surface);border-radius:4px;font-size:11px;">
+            <span style="color:${overallColor};font-weight:600;">📊 Güven: ${cs.overallLevel}</span>
+            <span style="color:#666;margin-left:8px;">(%${(cs.avgScore * 100).toFixed(0)} avg)</span>
+            <span style="color:#666;margin-left:8px;">H:${cs.counts.high || 0} M:${cs.counts.medium || 0} L:${cs.counts.low || 0}</span>
+        </div>`;
+    }
+    
+    // Görüntü kalitesi göster
+    if (r.imageQuality) {
+        const iq = r.imageQuality;
+        const qualityColor = iq.overall >= 70 ? '#10b981' : iq.overall >= 40 ? '#f59e0b' : '#ef4444';
+        html += `<div style="margin-bottom:8px;padding:4px 8px;background:var(--surface);border-radius:4px;font-size:10px;color:#666;">
+            <span style="color:${qualityColor};">🖼️ Görüntü: %${iq.overall.toFixed(0)}</span>
+            <span style="margin-left:6px;">B:${iq.brightness.toFixed(0)}</span>
+            <span style="margin-left:6px;">K:${iq.contrast.toFixed(0)}</span>
+            <span style="margin-left:6px;">N:${iq.sharpness.toFixed(0)}</span>
+        </div>`;
+    }
+    
     if (r.suspicious && r.suspiciousReasons?.length) {
         html += `<div style="margin-bottom:8px;color:#f59e0b;font-weight:600;">⚠️ Şüpheli okuma: ${r.suspiciousReasons.join(', ')}</div>`;
     }
+    
     html += r.perQuestion.map(p => {
         const color = p.status === 'Doğru' ? '#10b981' : p.status === 'Yanlış' ? '#ef4444' : p.status === 'Boş' ? '#666' : '#f59e0b';
         const scoreInfo = p.maxScore ? ` <span style="color:#666;font-size:9px;">(${p.maxScore})</span>` : '';
-        return `<div><span style="width:25px;display:inline-block;text-align:right;">${p.q}.</span> ${p.marked}${scoreInfo} <span style="color:${color}">${p.status}</span></div>`;
+        
+        // Confidence indicator
+        let confIcon = '';
+        if (p.confidence) {
+            const cl = p.confidence.level;
+            if (cl === 'high') confIcon = '<span style="color:#10b981;font-size:9px;">●</span> ';
+            else if (cl === 'medium') confIcon = '<span style="color:#f59e0b;font-size:9px;">◐</span> ';
+            else if (cl === 'low') confIcon = '<span style="color:#ef4444;font-size:9px;">○</span> ';
+            else if (cl === 'very_low') confIcon = '<span style="color:#ef4444;font-size:9px;">⚠</span> ';
+        }
+        
+        return `<div>${confIcon}<span style="width:25px;display:inline-block;text-align:right;">${p.q}.</span> ${p.marked}${scoreInfo} <span style="color:${color}">${p.status}</span></div>`;
     }).join('');
 
     document.getElementById('resultDetails').innerHTML = html;

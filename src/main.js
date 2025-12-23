@@ -1,7 +1,7 @@
 import { setupTabs, setupInputs, generateForm, downloadPNG } from './features/designer.js';
 import { renderSessionList, downloadSessionTxt, downloadSessionCsv, downloadSessionXlsx } from './features/results.js';
 import { initCamera, loadCameraDevices, onCameraChange } from './core/camera.js';
-import { toggleAutoScan, captureAndProcess, toggleScanSource, handleFileSelect, processUploadedFile, startAnswerKeyScan, clearUploadedFile, getPreprocessParams, preprocessToBinary, detectCornerMarkers, warpPerspective, checkWarpQuality, analyzeBubbles } from './core/omr.js';
+import { toggleAutoScan, captureAndProcess, toggleScanSource, handleFileSelect, processUploadedFile, startAnswerKeyScan, clearUploadedFile, getPreprocessParams, preprocessToBinary, detectCornerMarkers, warpPerspective, checkWarpQuality, analyzeBubbles, initAlignmentGuide, startMultiReadConsensus } from './core/omr.js';
 import { debounce, clampInt } from './utils/helpers.js';
 import { ensureAudioContext } from './core/audio.js';
 import { state } from './features/state.js';
@@ -39,6 +39,31 @@ document.addEventListener('DOMContentLoaded', () => {
       // state.shadowMode is updated? config.js didn't export setter, but we can access directly
       state.shadowMode = shadowToggle.checked;
     });
+  }
+
+  // Alignment Guide Toggle
+  const alignmentGuideToggle = document.getElementById('alignmentGuideToggle');
+  if (alignmentGuideToggle) {
+    alignmentGuideToggle.addEventListener('change', () => {
+      state.alignmentGuideEnabled = alignmentGuideToggle.checked;
+      const overlay = document.getElementById('alignmentOverlay');
+      if (overlay) {
+        overlay.style.display = alignmentGuideToggle.checked ? 'block' : 'none';
+      }
+    });
+  }
+
+  // Initialize Alignment Guide
+  const video = document.getElementById('video');
+  const alignmentOverlay = document.getElementById('alignmentOverlay');
+  if (video && alignmentOverlay) {
+    const guide = initAlignmentGuide(video, alignmentOverlay);
+    if (guide) {
+      guide.setOnReady((alignment) => {
+        // Otomatik okuma için kullanılabilir
+        console.log('Form hazır:', alignment.status);
+      });
+    }
   }
 
   // Cevap anahtarı event listener

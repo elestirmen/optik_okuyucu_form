@@ -74,7 +74,7 @@
   <!-- Local OpenCV -->
   <script async src="/libs/opencv.js" onload="cv['onRuntimeInitialized']=onOpenCvReady;"
     onerror="loadOpenCvCdn()"></script>
-  <script type="module" crossorigin src="/assets/index-k1Ls-8Jy.js"></script>
+  <script type="module" crossorigin src="/assets/index-BEc5si79.js"></script>
 </head>
 
 <body>
@@ -240,6 +240,7 @@
             <div id="cameraSection">
               <div class="video-wrap">
                 <video id="video" playsinline></video>
+                <canvas id="alignmentOverlay" class="alignment-overlay"></canvas>
                 <div class="overlay"></div>
                 <div class="scan-status" id="scanStatus">
                   <div class="dot"></div><span id="scanStatusText">Bekleniyor</span>
@@ -249,6 +250,9 @@
                 <button class="btn" id="startCameraBtn">📷 Kamerayı Başlat</button>
                 <button class="btn secondary" id="captureBtn" disabled>📸 Öğrenci Formu Tara</button>
                 <button class="btn secondary" id="autoScanBtn">🔄 Otomatik</button>
+                <label style="font-size:10px;color:var(--muted);display:flex;align-items:center;gap:4px;">
+                  <input type="checkbox" id="alignmentGuideToggle" checked> Hizalama Rehberi
+                </label>
               </div>
             </div>
 

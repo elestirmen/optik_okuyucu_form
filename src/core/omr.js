@@ -5,7 +5,12 @@ import { playSuccessChime } from './audio.js';
 import { renderResults, safeAddSessionResult } from '../features/results.js';
 import { initCamera, stopCamera, loadCameraDevices } from './camera.js';
 import jsQR from 'jsqr';
-// Removed circular dependencies or unused imports if any
+
+// Yeni modüller
+import { detectMarkersHybrid, detectCrossMarkers, assessMarkerQuality } from './markers.js';
+import { advancedPreprocess, assessImageQuality, autoTuneParameters, getAdaptiveFillParams } from './preprocessing.js';
+import { calculateQuestionConfidence, summarizeConfidence, MultiReadConsensus, detectAnomalies, formatConfidenceReport, CONFIDENCE_LEVELS } from './confidence.js';
+import { AlignmentGuide, calculateTargetAreas, assessAlignment, drawAlignmentOverlay, ALIGNMENT_STATUS } from './alignment.js';
 
 const BASE_FILL_ROI_SCALE = 1.04;
 const BASE_FILL_MASK_RATIO = 0.32;
@@ -20,18 +25,30 @@ let uploadedImage = null;
 let lastQrCheckAtMs = 0;
 let lastQrCorner = null;
 
+// Multi-read consensus instance
+let multiReadConsensus = null;
+let alignmentGuide = null;
+let lastImageQuality = null;
+let autoTunedParams = null;
+
 // ... (Previous exports: getPreprocessParams, preprocessToBinary, getFillParams - keep them) ...
 // I will rewrite the whole file to ensure completeness
 
 export function getPreprocessParams() {
     const shadow = state.shadowMode || (document.getElementById('shadowMode')?.checked);
     if (shadow) {
-        return { clahe: true, blurSigma: 1.0, blockSize: 13, cValue: 3 };
+        return { clahe: true, blurSigma: 1.0, blockSize: 13, cValue: 3, shadowRemoval: true, whiteBalance: true };
     }
-    return { clahe: false, blurSigma: 0, blockSize: 11, cValue: 2 };
+    return { clahe: false, blurSigma: 0, blockSize: 11, cValue: 2, shadowRemoval: false, whiteBalance: false };
 }
 
-export function preprocessToBinary(srcMat) {
+export function preprocessToBinary(srcMat, useAdvanced = true) {
+    // Gelişmiş preprocessing kullan (auto-tune ile)
+    if (useAdvanced && autoTunedParams) {
+        return advancedPreprocess(srcMat, autoTunedParams.params);
+    }
+    
+    // Legacy preprocessing (geriye dönük uyumluluk)
     const p = getPreprocessParams();
     const gray = new cv.Mat();
     cv.cvtColor(srcMat, gray, cv.COLOR_RGBA2GRAY);
@@ -52,6 +69,53 @@ export function preprocessToBinary(srcMat) {
     cv.adaptiveThreshold(blur, binary, 255, cv.ADAPTIVE_THRESH_GAUSSIAN_C, cv.THRESH_BINARY_INV, block, cVal);
     gray.delete(); blur.delete();
     return binary;
+}
+
+/**
+ * Görüntü kalitesini değerlendir ve parametreleri otomatik ayarla
+ */
+export function analyzeImageAndTuneParams(srcMat) {
+    lastImageQuality = assessImageQuality(srcMat);
+    autoTunedParams = autoTuneParameters(srcMat);
+    
+    return {
+        quality: lastImageQuality,
+        params: autoTunedParams
+    };
+}
+
+/**
+ * Multi-read consensus başlat
+ */
+export function startMultiReadConsensus(iterations = 3) {
+    multiReadConsensus = new MultiReadConsensus({ iterations });
+    return multiReadConsensus;
+}
+
+/**
+ * Multi-read consensus sonucu al
+ */
+export function getMultiReadConsensus() {
+    if (!multiReadConsensus) return null;
+    return multiReadConsensus.getConsensus();
+}
+
+/**
+ * Alignment guide başlat
+ */
+export function initAlignmentGuide(videoElement, overlayCanvas) {
+    alignmentGuide = new AlignmentGuide(videoElement, overlayCanvas);
+    return alignmentGuide;
+}
+
+/**
+ * Alignment guide'ı güncelle
+ */
+export function updateAlignmentGuide(markers) {
+    if (alignmentGuide) {
+        return alignmentGuide.update(markers);
+    }
+    return null;
 }
 
 export function getFillParams() {
@@ -205,60 +269,7 @@ function clamp01(v) {
     return Math.max(0, Math.min(1, v));
 }
 
-function evaluateCrossMarkerQuality(binary, rect) {
-    try {
-        const roi = binary.roi(rect);
-        const w = roi.cols;
-        const h = roi.rows;
-        const size = Math.min(w, h);
-        if (size < 14) { roi.delete(); return 0; }
-
-        const border = Math.max(2, Math.floor(size * 0.2));
-        const lineW = Math.max(2, Math.floor(size * 0.14));
-        const innerW = w - border * 2;
-        const innerH = h - border * 2;
-        if (innerW <= 4 || innerH <= 4) { roi.delete(); return 0; }
-
-        const countRect = (r) => {
-            const sub = roi.roi(r);
-            const n = cv.countNonZero(sub);
-            sub.delete();
-            return n;
-        };
-
-        const top = new cv.Rect(0, 0, w, border);
-        const bottom = new cv.Rect(0, h - border, w, border);
-        const left = new cv.Rect(0, border, border, innerH);
-        const right = new cv.Rect(w - border, border, border, innerH);
-
-        const borderArea = w * border * 2 + innerH * border * 2;
-        const borderWhite = countRect(top) + countRect(bottom) + countRect(left) + countRect(right);
-        const borderRatio = borderArea > 0 ? borderWhite / borderArea : 0;
-
-        const inner = new cv.Rect(border, border, innerW, innerH);
-        const innerArea = innerW * innerH;
-        const innerWhite = countRect(inner);
-        const innerRatio = innerArea > 0 ? innerWhite / innerArea : 0;
-
-        const midX = Math.max(border, Math.min(w - border - lineW, Math.round(w / 2 - lineW / 2)));
-        const midY = Math.max(border, Math.min(h - border - lineW, Math.round(h / 2 - lineW / 2)));
-        const vStrip = new cv.Rect(midX, border, lineW, innerH);
-        const hStrip = new cv.Rect(border, midY, innerW, lineW);
-        const vRatio = (lineW * innerH) > 0 ? countRect(vStrip) / (lineW * innerH) : 0;
-        const hRatio = (innerW * lineW) > 0 ? countRect(hStrip) / (innerW * lineW) : 0;
-
-        roi.delete();
-
-        const borderScore = clamp01((borderRatio - 0.25) / 0.55);
-        const vScore = clamp01((vRatio - 0.20) / 0.65);
-        const hScore = clamp01((hRatio - 0.20) / 0.65);
-        let score = borderScore * 0.35 + vScore * 0.325 + hScore * 0.325;
-        if (innerRatio < 0.06 || innerRatio > 0.90) score *= 0.6;
-        return score;
-    } catch {
-        return 0;
-    }
-}
+// evaluateCrossMarkerQuality - markers.js'e taşındı
 
 function scoreBubble(binary, choice, w, h, roiScale, maskRatio, dx = 0, dy = 0) {
     const roiW = Math.round(choice.width * w * roiScale);
@@ -381,7 +392,11 @@ export function processFrame(isAuto) {
 
     try {
         src = cv.imread('captureCanvas');
-        const blurVar = estimateLaplacianVariance(src);
+        
+        // Görüntü kalitesini analiz et ve parametreleri otomatik ayarla
+        const qualityAnalysis = analyzeImageAndTuneParams(src);
+        
+        const blurVar = qualityAnalysis.quality.sharpness;
         if (blurVar !== null && blurVar < BLUR_VAR_REJECT) {
             updateStatus('error', 'Görüntü bulanık');
             if (!isAuto) {
@@ -389,17 +404,42 @@ export function processFrame(isAuto) {
             }
             return;
         }
-        binary = preprocessToBinary(src);
+        
+        // Auto-tune log
+        if (qualityAnalysis.params.autoTuned && !isAuto) {
+            const reasons = qualityAnalysis.params.reasons.slice(0, 2).join(', ');
+            setLog('omrLog', `⚙️ Otomatik ayar: ${reasons}`, 'info');
+        }
+        
+        // Gelişmiş preprocessing kullan
+        binary = preprocessToBinary(src, true);
 
         markerOverlay = src.clone();
-        const markers = detectCornerMarkers(binary, markerOverlay);
+        
+        // Hybrid marker tespiti (ArUco + Cross-marker fallback)
+        const markerResult = detectMarkersHybrid(src, binary, markerOverlay);
+        const markers = markerResult.markers;
+        
+        // Marker kalitesini değerlendir
+        const markerQuality = assessMarkerQuality(markers);
+        
         cv.imshow('markerCanvas', markerOverlay);
+        
+        // Alignment guide güncelle
+        updateAlignmentGuide(markers);
 
         if (!markers) {
             updateStatus('', 'Form bulunamadı');
-            if (!isAuto) setLog('omrLog', 'Köşe markerları bulunamadı', 'error');
+            if (!isAuto) setLog('omrLog', `Köşe markerları bulunamadı (${markerResult.method})`, 'error');
             return;
         }
+        
+        // Marker metodu bilgisi
+        if (!isAuto && markerResult.method !== 'cross') {
+            const methodLabels = { aruco: 'ArUco', estimated: 'Tahmini', cross: 'Cross' };
+            setLog('omrLog', `📍 Marker: ${methodLabels[markerResult.method] || markerResult.method} (kalite: ${(markerResult.quality * 100).toFixed(0)}%)`, 'info');
+        }
+        
         const warpCheck = checkWarpQuality(markers, src.cols, src.rows);
         if (!warpCheck.ok) {
             if (!isAuto) setLog('omrLog', `Eğim/alan kontrolü başarısız: ${warpCheck.reasons.join(', ')}`, 'error');
@@ -414,26 +454,46 @@ export function processFrame(isAuto) {
         }
         cv.imshow('warpCanvas', warped);
 
-        const result = analyzeBubbles(warped);
+        // Confidence score ile analiz
+        const result = analyzeBubblesWithConfidence(warped, qualityAnalysis.quality);
+        
+        // Anomali tespiti
+        const anomalies = detectAnomalies(result);
+        if (anomalies.length > 0) {
+            result.suspicious = true;
+            result.suspiciousReasons = result.suspiciousReasons || [];
+            result.suspiciousReasons.push(...anomalies.map(a => a.message));
+            result.anomalies = anomalies;
+        }
+        
         if (blurVar !== null && blurVar < BLUR_VAR_WARN) {
             result.suspicious = true;
             result.suspiciousReasons = result.suspiciousReasons || [];
             result.suspiciousReasons.push(`Görüntü bulanık olabilir (netlik ${blurVar.toFixed(1)})`);
         }
+        
+        // Multi-read consensus'a ekle
+        if (multiReadConsensus) {
+            multiReadConsensus.addReading(result, qualityAnalysis.params);
+        }
+        
         renderResults(result);
         safeAddSessionResult(result);
+        
         if (result.suspicious) {
             updateStatus('error', 'Şüpheli okuma');
             if (!isAuto) setLog('omrLog', `⚠️ Okuma şüpheli: ${result.suspiciousReasons.join(', ')}`, 'error');
         } else {
             playSuccessChime();
-            updateStatus('ready', '✓ Okundu');
+            const confLevel = result.confidenceSummary?.overallLevel || 'N/A';
+            updateStatus('ready', `✓ Okundu (${confLevel})`);
             if (!isAuto) setLog('omrLog', '✓ Tarama tamamlandı', 'success');
         }
 
         warped.delete();
     } catch (e) {
         if (!isAuto) setLog('omrLog', 'Hata: ' + e.message, 'error');
+        console.error('processFrame error:', e);
     } finally {
         if (src) src.delete();
         if (binary) binary.delete();
@@ -594,89 +654,9 @@ export function clearUploadedFile() {
 // Copying them from previous step but ensuring `startAnswerKeyScan` is exportable.
 // Also `processAnswerKeyFrame` uses `readAnswerKeyFromScan`.
 
+// detectCornerMarkers - markers.js'e taşındı, geriye dönük uyumluluk için wrapper
 export function detectCornerMarkers(binary, overlay) {
-    const contours = new cv.MatVector();
-    const hierarchy = new cv.Mat();
-    cv.findContours(binary, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
-
-    const candidates = [];
-    const imgArea = binary.rows * binary.cols;
-
-    for (let i = 0; i < contours.size(); i++) {
-        const cnt = contours.get(i);
-        const area = cv.contourArea(cnt);
-        if (area < imgArea * 0.0003 || area > imgArea * 0.02) continue;
-
-        const rect = cv.boundingRect(cnt);
-        const aspect = rect.width / rect.height;
-        if (aspect > 0.55 && aspect < 1.8) {
-            const hull = new cv.Mat();
-            cv.convexHull(cnt, hull);
-            const solidity = area / cv.contourArea(hull);
-            hull.delete();
-
-            if (solidity > 0.6) {
-                const quality = evaluateCrossMarkerQuality(binary, rect);
-                if (quality < 0.45) continue;
-                candidates.push({
-                    center: (() => {
-                        const m = cv.moments(cnt, false);
-                        if (m.m00) return { x: m.m10 / m.m00, y: m.m01 / m.m00 };
-                        return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
-                    })(),
-                    rect,
-                    quality
-                });
-            }
-        }
-    }
-
-    contours.delete(); hierarchy.delete();
-    if (candidates.length < 4) return null;
-
-    const cx = binary.cols / 2, cy = binary.rows / 2;
-    const maxDim = Math.max(binary.cols, binary.rows) || 1;
-    let tl, tr, bl, br;
-    let tlRank = -Infinity, trRank = -Infinity, blRank = -Infinity, brRank = -Infinity;
-
-    for (const c of candidates) {
-        const left = c.center.x < cx, top = c.center.y < cy;
-        const d = (x, y) => Math.hypot(c.center.x - x, c.center.y - y);
-
-        if (left && top) {
-            const rank = c.quality * 2 - d(0, 0) / maxDim;
-            if (rank > tlRank) { tlRank = rank; tl = c; }
-        }
-        if (!left && top) {
-            const rank = c.quality * 2 - d(binary.cols, 0) / maxDim;
-            if (rank > trRank) { trRank = rank; tr = c; }
-        }
-        if (left && !top) {
-            const rank = c.quality * 2 - d(0, binary.rows) / maxDim;
-            if (rank > blRank) { blRank = rank; bl = c; }
-        }
-        if (!left && !top) {
-            const rank = c.quality * 2 - d(binary.cols, binary.rows) / maxDim;
-            if (rank > brRank) { brRank = rank; br = c; }
-        }
-    }
-
-    if (!tl || !tr || !bl || !br) return null;
-
-    if (overlay) {
-        const green = new cv.Scalar(0, 255, 0, 255);
-        [tl, tr, bl, br].forEach(m => {
-            cv.rectangle(overlay, new cv.Point(m.rect.x, m.rect.y),
-                new cv.Point(m.rect.x + m.rect.width, m.rect.y + m.rect.height), green, 2);
-        });
-    }
-
-    return {
-        tl: tl.center,
-        tr: tr.center,
-        bl: bl.center,
-        br: br.center
-    };
+    return detectCrossMarkers(binary, overlay);
 }
 
 export function warpPerspective(src, markers) {
@@ -876,6 +856,199 @@ export function analyzeBubbles(warpMat, debugDraw = true) {
 
     const net = (correct - wrong * penalty).toFixed(2);
     return { correct, wrong, blank, multi, net, perQuestion, studentNo, suspicious: suspiciousReasons.length > 0, suspiciousReasons };
+}
+
+/**
+ * Confidence score ile gelişmiş baloncuk analizi
+ */
+export function analyzeBubblesWithConfidence(warpMat, imageQuality = null, debugDraw = true) {
+    const threshold = parseFloat(document.getElementById('fillThreshold').value) || 0.20;
+    const penalty = parseFloat(document.getElementById('penalty').value) || 0.25;
+    
+    // Görüntü kalitesine göre adaptif parametreler
+    const fillParams = imageQuality ? getAdaptiveFillParams(imageQuality) : getFillParams();
+    const blankGuard = Math.min(fillParams.blankGuard, threshold * 0.9);
+
+    const binary = preprocessToBinary(warpMat, true);
+
+    const w = warpMat.cols, h = warpMat.rows;
+    let correct = 0, wrong = 0, blank = 0, multi = 0;
+    const suspiciousReasons = [];
+    const perQuestion = [];
+
+    let debugMat = null;
+    if (debugDraw) {
+        debugMat = warpMat.clone();
+    }
+
+    const questions = state.layoutConfig?.questions || [];
+
+    for (const q of questions) {
+        let scores = scoreChoices(binary, q.choices, w, h, fillParams.roiScale, fillParams.maskRatio);
+        scores = refineScoresIfNeeded(binary, q.choices, w, h, fillParams.roiScale, fillParams.maskRatio, scores, threshold, blankGuard);
+
+        // Confidence hesapla
+        const confidence = calculateQuestionConfidence(scores, threshold, blankGuard);
+        
+        const stats = getScoreStats(scores, threshold);
+        const thresholdEff = getAdaptiveFillThreshold(stats, threshold);
+        const maxScore = stats.best.score;
+        
+        if (confidence.isBlank) {
+            blank++;
+            perQuestion.push({ 
+                q: q.questionNumber, 
+                marked: '-', 
+                status: 'Boş', 
+                maxScore: maxScore.toFixed(2),
+                confidence
+            });
+            continue;
+        }
+
+        let status = 'Boş';
+        let candidate = null;
+        let markedLabel = '-';
+
+        const best = stats.best;
+        const second = stats.second;
+
+        if (best.score < thresholdEff && maxScore > 0.05) {
+            if (best.score > second.score * 1.5 || (best.score > 0.1 && best.score > second.score * 1.3)) {
+                candidate = best;
+            }
+        } else if (best.score >= thresholdEff) {
+            const multiSecondMin = Math.max(threshold + 0.06, thresholdEff);
+            const multiClose = second.score >= threshold && (second.score >= best.score * 0.88 || stats.gap < 0.06);
+            const isMulti = second.score >= multiSecondMin && multiClose;
+            if (isMulti) {
+                candidate = best;
+                markedLabel = candidate.opt + '*';
+                multi++;
+                suspiciousReasons.push(`S${q.questionNumber}: çoklu işaret`);
+            } else {
+                const baseline = stats.median ?? 0;
+                const clearGap = stats.gap >= 0.06 || best.score >= second.score * 1.25;
+                const clearAboveBaseline = (best.score - baseline) >= 0.10;
+                if (clearGap || clearAboveBaseline) {
+                    candidate = best;
+                }
+            }
+        }
+
+        if (candidate) {
+            const key = state.answerKey ? state.answerKey[q.questionNumber] : null;
+            status = key && key === candidate.opt ? 'Doğru' : 'Yanlış';
+            if (markedLabel === '-') markedLabel = candidate.opt;
+            if (status === 'Doğru') correct++; else wrong++;
+            
+            // Düşük güven uyarısı
+            if (confidence.level === CONFIDENCE_LEVELS.LOW || confidence.level === CONFIDENCE_LEVELS.VERY_LOW) {
+                suspiciousReasons.push(`S${q.questionNumber}: düşük güven (${confidence.reasons[0] || 'belirsiz'})`);
+            }
+        } else {
+            blank++;
+            if (maxScore >= thresholdEff * 0.6) {
+                suspiciousReasons.push(`S${q.questionNumber}: belirsiz işaret (skor ${maxScore.toFixed(2)})`);
+            }
+        }
+
+        perQuestion.push({ 
+            q: q.questionNumber, 
+            marked: markedLabel, 
+            status, 
+            maxScore: maxScore.toFixed(2),
+            confidence
+        });
+    }
+
+    if (debugMat) {
+        cv.imshow('warpCanvas', debugMat);
+        debugMat.delete();
+    }
+
+    // Öğrenci numarası okuma (mevcut kodla aynı)
+    let studentNo = '';
+    if (state.layoutConfig?.studentId) {
+        const digitCenterMaskRatio = Math.max(fillParams.maskRatio, 0.34);
+        const digitRoiScale = Math.max(fillParams.roiScale, 1.06);
+        const digitThreshold = Math.min(0.18, Math.max(0.10, threshold * 0.6));
+        const digitBlankGuard = Math.min(0.07, digitThreshold * 0.6);
+        const digitMissing = [];
+        const digitLowConf = [];
+
+        for (let col = 0; col < state.layoutConfig.studentId.digits; col++) {
+            const colBubbles = state.layoutConfig.studentId.bubbles.filter(b => b.col === col);
+            const entries = colBubbles.map(b => {
+                const centerScore = scoreBubble(binary, b, w, h, digitRoiScale, digitCenterMaskRatio);
+                const fullScore = scoreBubble(binary, b, w, h, digitRoiScale, 1.0);
+                return { opt: String(b.digit), centerScore, fullScore };
+            });
+            const fullScoresSorted = entries.map(e => e.fullScore).sort((a, b) => a - b);
+            const medianFull = fullScoresSorted[Math.floor(fullScoresSorted.length / 2)] ?? 0;
+            const scores = entries.map(e => ({
+                opt: e.opt,
+                score: Math.max(e.centerScore, Math.max(0, e.fullScore - (medianFull + 0.02)))
+            }));
+
+            const stats = getScoreStats(scores, digitThreshold);
+            const best = stats.best;
+            const second = stats.second;
+
+            if (best.score < digitBlankGuard) {
+                studentNo += '?';
+                if (digitMissing.length < 3) digitMissing.push(`H${col + 1}`);
+                continue;
+            }
+
+            const gapOk = stats.gap >= 0.05 || best.score >= second.score * 1.25;
+            const ambiguous = second.score >= digitThreshold * 0.9 && stats.gap < 0.05;
+
+            if (best.score >= digitThreshold && gapOk && !ambiguous) {
+                studentNo += best.opt;
+                if (best.score < (digitThreshold + 0.06) || stats.gap < 0.07) {
+                    if (digitLowConf.length < 3) digitLowConf.push(`H${col + 1}`);
+                }
+                continue;
+            }
+
+            if (best.score < digitThreshold && best.score > second.score * 1.8 && best.score >= digitBlankGuard) {
+                studentNo += best.opt;
+                if (digitLowConf.length < 3) digitLowConf.push(`H${col + 1}`);
+                continue;
+            }
+
+            studentNo += '?';
+            if (digitMissing.length < 3) digitMissing.push(`H${col + 1}`);
+        }
+
+        if (digitMissing.length) {
+            suspiciousReasons.push(`Öğrenci no okunamadı (${digitMissing.join(', ')})`);
+        } else if (digitLowConf.length) {
+            suspiciousReasons.push(`Öğrenci no düşük güven (${digitLowConf.join(', ')})`);
+        }
+    }
+
+    binary.delete();
+
+    const net = (correct - wrong * penalty).toFixed(2);
+    
+    // Confidence özeti
+    const confidenceSummary = summarizeConfidence(perQuestion);
+    
+    return { 
+        correct, 
+        wrong, 
+        blank, 
+        multi, 
+        net, 
+        perQuestion, 
+        studentNo, 
+        suspicious: suspiciousReasons.length > 0, 
+        suspiciousReasons,
+        confidenceSummary,
+        imageQuality
+    };
 }
 
 export function processAnswerKeyFrame() {
