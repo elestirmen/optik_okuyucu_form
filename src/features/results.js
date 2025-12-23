@@ -181,8 +181,12 @@ function persistAllEntriesSafely() {
 }
 
 export function downloadSessionTxt() {
-    if (sessionResults.length === 0) { alert('Kayit yok.'); return; }
-    const lines = sessionResults.map(r => formatEntryLine(r, false));
+    if (sessionResults.length === 0 && Object.keys(state.answerKey || {}).length === 0) { alert('Kayit yok.'); return; }
+    const lines = [];
+    const maxQ = getMaxQuestionCount();
+    const answerKeyEntry = buildAnswerKeyEntry(maxQ);
+    if (answerKeyEntry) lines.push(formatEntryLine(answerKeyEntry, false));
+    lines.push(...sessionResults.map(r => formatEntryLine(r, false)));
     const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -197,19 +201,60 @@ function csvEscape(v) {
     return '"' + s.replace(/"/g, '""') + '"';
 }
 
+function getMaxQuestionCount() {
+    const sessionMax = sessionResults.length
+        ? Math.max(...sessionResults.map(r => (r.perQuestion || []).length || 0))
+        : 0;
+    const keyNums = Object.keys(state.answerKey || {})
+        .map(k => parseInt(k, 10))
+        .filter(n => Number.isFinite(n));
+    const keyMax = keyNums.length ? Math.max(...keyNums) : 0;
+    const layoutMax = state.layoutConfig?.questions?.length || 0;
+    return Math.max(sessionMax, keyMax, layoutMax);
+}
+
+function buildAnswerKeyEntry(maxQ) {
+    const key = state.answerKey || {};
+    if (Object.keys(key).length === 0) return null;
+    const perQuestion = [];
+    for (let i = 1; i <= maxQ; i++) {
+        perQuestion.push({ q: i, marked: key[i] || '-', status: 'Anahtar' });
+    }
+    return {
+        id: 0,
+        studentNo: 'Cevap Anahtarı',
+        correct: '',
+        wrong: '',
+        blank: '',
+        multi: '',
+        net: '',
+        perQuestion,
+        suspicious: false,
+        suspiciousReasons: []
+    };
+}
+
 export function downloadSessionCsv() {
-    if (sessionResults.length === 0) { alert('Kayit yok.'); return; }
-    const maxQ = Math.max(...sessionResults.map(r => (r.perQuestion || []).length || 0));
+    if (sessionResults.length === 0 && Object.keys(state.answerKey || {}).length === 0) { alert('Kayit yok.'); return; }
+    const maxQ = getMaxQuestionCount();
     const header = ['Sira', 'OgrenciNo', 'Dogru', 'Yanlis', 'Bos', 'Coklu', 'Net'];
     for (let i = 1; i <= maxQ; i++) header.push(`S${i}`);
-    const rows = sessionResults.map(r => {
+    const rows = [];
+    const keyEntry = buildAnswerKeyEntry(maxQ);
+    if (keyEntry) {
+        const keyRow = [keyEntry.id, keyEntry.studentNo, keyEntry.correct, keyEntry.wrong, keyEntry.blank, keyEntry.multi, keyEntry.net];
+        const answers = keyEntry.perQuestion || [];
+        for (let i = 0; i < maxQ; i++) keyRow.push(answers[i] ? (answers[i].marked || '') : '');
+        rows.push(keyRow.map(csvEscape).join(','));
+    }
+    rows.push(...sessionResults.map(r => {
         const base = [r.id, r.studentNo || '', r.correct, r.wrong, r.blank, r.multi, r.net];
         const answers = r.perQuestion || [];
         for (let i = 0; i < maxQ; i++) {
             base.push(answers[i] ? (answers[i].marked || '') : '');
         }
         return base.map(csvEscape).join(',');
-    });
+    }));
     const csv = [header.map(csvEscape).join(','), ...rows].join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -221,16 +266,23 @@ export function downloadSessionCsv() {
 }
 
 export async function downloadSessionXlsx() {
-    if (sessionResults.length === 0) { alert('Kayit yok.'); return; }
+    if (sessionResults.length === 0 && Object.keys(state.answerKey || {}).length === 0) { alert('Kayit yok.'); return; }
     const XLSX = await getXlsxModule();
     if (!XLSX?.utils?.aoa_to_sheet || !XLSX?.write) {
         alert('XLSX kütüphanesi yüklenemedi. İnterneti kontrol edin.');
         return;
     }
-    const maxQ = Math.max(...sessionResults.map(r => (r.perQuestion || []).length || 0));
+    const maxQ = getMaxQuestionCount();
     const header = ['Sira', 'OgrenciNo', 'Dogru', 'Yanlis', 'Bos', 'Coklu', 'Net'];
     for (let i = 1; i <= maxQ; i++) header.push(`S${i}`);
     const data = [header];
+    const keyEntry = buildAnswerKeyEntry(maxQ);
+    if (keyEntry) {
+        const keyRow = [keyEntry.id, keyEntry.studentNo, keyEntry.correct, keyEntry.wrong, keyEntry.blank, keyEntry.multi, keyEntry.net];
+        const answers = keyEntry.perQuestion || [];
+        for (let i = 0; i < maxQ; i++) keyRow.push(answers[i] ? (answers[i].marked || '') : '');
+        data.push(keyRow);
+    }
     sessionResults.forEach(r => {
         const row = [r.id, r.studentNo || '', r.correct, r.wrong, r.blank, r.multi, r.net];
         const answers = r.perQuestion || [];
