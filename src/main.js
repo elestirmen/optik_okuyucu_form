@@ -1,7 +1,7 @@
 import { setupTabs, setupInputs, generateForm, downloadPNG } from './features/designer.js';
 import { renderSessionList, downloadSessionTxt, downloadSessionCsv, downloadSessionXlsx } from './features/results.js';
 import { initCamera, loadCameraDevices, onCameraChange } from './core/camera.js';
-import { toggleAutoScan, captureAndProcess, toggleScanSource, handleFileSelect, processUploadedFile, startAnswerKeyScan, clearUploadedFile, getPreprocessParams, preprocessToBinary, detectCornerMarkers, warpPerspective, checkWarpQuality, analyzeBubbles, initAlignmentGuide, startMultiReadConsensus } from './core/omr.js';
+import { toggleAutoScan, captureAndProcess, toggleScanSource, handleFileSelect, processUploadedFile, startAnswerKeyScan, clearUploadedFile, getPreprocessParams, preprocessToBinary, detectCornerMarkers, warpPerspective, checkWarpQuality, analyzeBubbles, initAlignmentGuide, startMultiReadConsensus, resetMarkerStabilization } from './core/omr.js';
 import { debounce, clampInt } from './utils/helpers.js';
 import { ensureAudioContext } from './core/audio.js';
 import { state } from './features/state.js';
@@ -27,6 +27,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('startCameraBtn')?.addEventListener('click', initCamera);
   document.getElementById('captureBtn')?.addEventListener('click', () => captureAndProcess(false));
   document.getElementById('autoScanBtn')?.addEventListener('click', toggleAutoScan);
+  document.getElementById('resetStabilizationBtn')?.addEventListener('click', () => {
+    resetMarkerStabilization();
+    console.log('Stabilizasyon sıfırlandı');
+  });
   document.getElementById('downloadTxtBtn')?.addEventListener('click', downloadSessionTxt);
   document.getElementById('downloadCsvBtn')?.addEventListener('click', downloadSessionCsv);
   document.getElementById('downloadXlsxBtn')?.addEventListener('click', downloadSessionXlsx);

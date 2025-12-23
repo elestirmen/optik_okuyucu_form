@@ -7,7 +7,7 @@ import { initCamera, stopCamera, loadCameraDevices } from './camera.js';
 import jsQR from 'jsqr';
 
 // Yeni modüller
-import { detectMarkersHybrid, detectCrossMarkers, assessMarkerQuality } from './markers.js';
+import { detectMarkersHybrid, detectCrossMarkers, assessMarkerQuality, stabilizeMarkers, resetStabilization, getStabilizationStatus } from './markers.js';
 import { advancedPreprocess, assessImageQuality, autoTuneParameters, getAdaptiveFillParams } from './preprocessing.js';
 import { calculateQuestionConfidence, summarizeConfidence, MultiReadConsensus, detectAnomalies, formatConfidenceReport, CONFIDENCE_LEVELS } from './confidence.js';
 import { AlignmentGuide, calculateTargetAreas, assessAlignment, drawAlignmentOverlay, ALIGNMENT_STATUS } from './alignment.js';
@@ -16,11 +16,17 @@ import { getSettings, getSetting, getPreprocessingParams, getFillParams as getSe
 const BASE_FILL_ROI_SCALE = 1.04;
 const BASE_FILL_MASK_RATIO = 0.32;
 const BASE_BLANK_GUARD = 0.18;
-const WARP_SKEW_LIMIT = 0.15;
-const WARP_AREA_MIN_RATIO = 0.10;
+const WARP_SKEW_LIMIT = 0.12; // Sıkılaştırıldı (0.15 -> 0.12)
+const WARP_AREA_MIN_RATIO = 0.08; // Daha toleranslı (0.10 -> 0.08)
+const WARP_AREA_MAX_RATIO = 0.98; // Yeni: maksimum alan kontrolü
 const CAPTURE_MAX_DIM = 1280;
 const BLUR_VAR_WARN = 25;
 const BLUR_VAR_REJECT = 12;
+
+// Robust okuma için ek sabitler
+const MIN_MARKER_QUALITY = 0.35; // Minimum kabul edilebilir marker kalitesi
+const CONSECUTIVE_FAIL_RESET = 5; // Bu kadar ardışık başarısızlıktan sonra stabilizasyonu sıfırla
+let consecutiveFailCount = 0;
 
 let uploadedImage = null;
 let lastQrCheckAtMs = 0;
@@ -120,12 +126,24 @@ export function initAlignmentGuide(videoElement, overlayCanvas) {
 
 /**
  * Alignment guide'ı güncelle
+ * @param {Object} markers - Marker pozisyonları
+ * @param {number} sourceWidth - Kaynak canvas genişliği
+ * @param {number} sourceHeight - Kaynak canvas yüksekliği
  */
-export function updateAlignmentGuide(markers) {
+export function updateAlignmentGuide(markers, sourceWidth = 0, sourceHeight = 0) {
     if (alignmentGuide) {
-        return alignmentGuide.update(markers);
+        return alignmentGuide.update(markers, sourceWidth, sourceHeight);
     }
     return null;
+}
+
+/**
+ * Alignment guide'ı sıfırla
+ */
+export function resetAlignmentGuide() {
+    if (alignmentGuide) {
+        alignmentGuide.reset();
+    }
 }
 
 export function getFillParams() {
@@ -418,6 +436,11 @@ export function processFrame(isAuto) {
         const blurVar = qualityAnalysis.quality.sharpness;
         if (blurVar !== null && blurVar < BLUR_VAR_REJECT) {
             updateStatus('error', 'Görüntü bulanık');
+            consecutiveFailCount++;
+            if (consecutiveFailCount >= CONSECUTIVE_FAIL_RESET) {
+                resetStabilization();
+                consecutiveFailCount = 0;
+            }
             if (!isAuto) {
                 setLog('omrLog', `⚠️ Görüntü bulanık (netlik ${blurVar.toFixed(1)}). Telefonu sabitleyip tekrar deneyin.`, 'error');
             }
@@ -435,31 +458,70 @@ export function processFrame(isAuto) {
 
         markerOverlay = src.clone();
         
-        // Hybrid marker tespiti (ArUco + Cross-marker fallback)
-        const markerResult = detectMarkersHybrid(src, binary, markerOverlay);
+        // Hybrid marker tespiti (ArUco + Cross-marker fallback + Stabilizasyon)
+        const markerResult = detectMarkersHybrid(src, binary, markerOverlay, true);
         const markers = markerResult.markers;
-        
-        // Marker kalitesini değerlendir
-        const markerQuality = assessMarkerQuality(markers);
         
         cv.imshow('markerCanvas', markerOverlay);
         
-        // Alignment guide güncelle
-        updateAlignmentGuide(markers);
+        // Alignment guide güncelle (kaynak boyutlarıyla birlikte)
+        updateAlignmentGuide(markers, src.cols, src.rows);
 
+        // Marker bulunamadı veya kalite çok düşük
         if (!markers) {
+            consecutiveFailCount++;
+            if (consecutiveFailCount >= CONSECUTIVE_FAIL_RESET) {
+                resetStabilization();
+                consecutiveFailCount = 0;
+                if (!isAuto) setLog('omrLog', '🔄 Stabilizasyon sıfırlandı', 'info');
+            }
+            
             updateStatus('', 'Form bulunamadı');
-            if (!isAuto) setLog('omrLog', `Köşe markerları bulunamadı (${markerResult.method})`, 'error');
+            if (!isAuto) {
+                const reason = markerResult.stabilizationInfo?.reason || 
+                              markerResult.qualityAssessment?.issues?.[0] || 
+                              'Marker tespit edilemedi';
+                setLog('omrLog', `Köşe markerları bulunamadı: ${reason}`, 'error');
+            }
             return;
         }
         
-        // Marker metodu bilgisi
-        if (!isAuto && markerResult.method !== 'cross') {
-            const methodLabels = { aruco: 'ArUco', estimated: 'Tahmini', cross: 'Cross' };
-            setLog('omrLog', `📍 Marker: ${methodLabels[markerResult.method] || markerResult.method} (kalite: ${(markerResult.quality * 100).toFixed(0)}%)`, 'info');
+        // Marker kalitesi çok düşük mü?
+        if (markerResult.quality < MIN_MARKER_QUALITY) {
+            consecutiveFailCount++;
+            updateStatus('error', 'Düşük kalite');
+            if (!isAuto) {
+                const issues = markerResult.qualityAssessment?.issues?.slice(0, 2).join(', ') || 'Kalite düşük';
+                setLog('omrLog', `⚠️ Marker kalitesi yetersiz: ${issues}`, 'error');
+            }
+            return;
         }
         
-        const warpCheck = checkWarpQuality(markers, src.cols, src.rows);
+        // Başarılı tespit - sayacı sıfırla
+        consecutiveFailCount = 0;
+        
+        // Marker metodu bilgisi
+        if (!isAuto) {
+            const methodLabels = { 
+                aruco: 'ArUco', 
+                'aruco+stable': 'ArUco (stabil)',
+                estimated: 'Tahmini', 
+                'estimated+stable': 'Tahmini (stabil)',
+                cross: 'Cross',
+                'cross+stable': 'Cross (stabil)'
+            };
+            const methodLabel = methodLabels[markerResult.method] || markerResult.method;
+            const stabilStatus = getStabilizationStatus();
+            
+            if (stabilStatus.isStable) {
+                setLog('omrLog', `📍 ${methodLabel} | Kalite: ${(markerResult.quality * 100).toFixed(0)}% | Stabil: ✓`, 'info');
+            } else if (markerResult.method !== 'cross') {
+                setLog('omrLog', `📍 ${methodLabel} (kalite: ${(markerResult.quality * 100).toFixed(0)}%)`, 'info');
+            }
+        }
+        
+        // Warp kalite kontrolü (daha detaylı)
+        const warpCheck = checkWarpQuality(markers, src.cols, src.rows, !isAuto);
         if (!warpCheck.ok) {
             if (!isAuto) setLog('omrLog', `Eğim/alan kontrolü başarısız: ${warpCheck.reasons.join(', ')}`, 'error');
             updateStatus('error', 'Eğim çok yüksek');
@@ -485,11 +547,25 @@ export function processFrame(isAuto) {
             result.anomalies = anomalies;
         }
         
+        // Düşük marker kalitesi uyarısı
+        if (markerResult.quality < 0.6) {
+            result.suspicious = true;
+            result.suspiciousReasons = result.suspiciousReasons || [];
+            result.suspiciousReasons.push(`Marker kalitesi düşük (${(markerResult.quality * 100).toFixed(0)}%)`);
+        }
+        
         if (blurVar !== null && blurVar < BLUR_VAR_WARN) {
             result.suspicious = true;
             result.suspiciousReasons = result.suspiciousReasons || [];
             result.suspiciousReasons.push(`Görüntü bulanık olabilir (netlik ${blurVar.toFixed(1)})`);
         }
+        
+        // Stabilizasyon bilgisi ekle
+        result.stabilizationInfo = {
+            isStable: markerResult.stabilizationInfo?.stabilized || false,
+            method: markerResult.method,
+            quality: markerResult.quality
+        };
         
         // Multi-read consensus'a ekle
         if (multiReadConsensus) {
@@ -505,12 +581,14 @@ export function processFrame(isAuto) {
         } else {
             playSuccessChime();
             const confLevel = result.confidenceSummary?.overallLevel || 'N/A';
-            updateStatus('ready', `✓ Okundu (${confLevel})`);
+            const stabilIcon = result.stabilizationInfo?.isStable ? ' 🔒' : '';
+            updateStatus('ready', `✓ Okundu (${confLevel})${stabilIcon}`);
             if (!isAuto) setLog('omrLog', '✓ Tarama tamamlandı', 'success');
         }
 
         warped.delete();
     } catch (e) {
+        consecutiveFailCount++;
         if (!isAuto) setLog('omrLog', 'Hata: ' + e.message, 'error');
         console.error('processFrame error:', e);
     } finally {
@@ -518,6 +596,15 @@ export function processFrame(isAuto) {
         if (binary) binary.delete();
         if (markerOverlay) markerOverlay.delete();
     }
+}
+
+/**
+ * Stabilizasyonu manuel sıfırla (dışarıdan çağrılabilir)
+ */
+export function resetMarkerStabilization() {
+    resetStabilization();
+    resetAlignmentGuide();
+    consecutiveFailCount = 0;
 }
 
 export function captureAndProcess(isAuto = false) {
@@ -704,22 +791,85 @@ export function warpPerspective(src, markers) {
     return dst;
 }
 
-export function checkWarpQuality(markers, imgW, imgH) {
+export function checkWarpQuality(markers, imgW, imgH, strict = false) {
+    if (!markers || !markers.tl || !markers.tr || !markers.bl || !markers.br) {
+        return { ok: false, reasons: ['Eksik marker köşesi'] };
+    }
+    
     const dist = (p1, p2) => Math.hypot(p1.x - p2.x, p1.y - p2.y);
     const wt = dist(markers.tl, markers.tr);
     const wb = dist(markers.bl, markers.br);
     const hl = dist(markers.tl, markers.bl);
     const hr = dist(markers.tr, markers.br);
+    
+    // Minimum kenar uzunluğu kontrolü
+    const minEdge = Math.min(wt, wb, hl, hr);
+    if (minEdge < 50) {
+        return { ok: false, reasons: ['Form kenarları çok kısa'] };
+    }
+    
     const avgW = (wt + wb) / 2;
     const avgH = (hl + hr) / 2;
-    const areaRatio = (avgW * avgH) / (imgW * imgH);
+    
+    // Gerçek dörtgen alanı (Shoelace formülü)
+    const area = 0.5 * Math.abs(
+        (markers.tl.x * markers.tr.y - markers.tr.x * markers.tl.y) +
+        (markers.tr.x * markers.br.y - markers.br.x * markers.tr.y) +
+        (markers.br.x * markers.bl.y - markers.bl.x * markers.br.y) +
+        (markers.bl.x * markers.tl.y - markers.tl.x * markers.bl.y)
+    );
+    const imgArea = imgW * imgH;
+    const areaRatio = area / imgArea;
+    
     const skewW = Math.abs(wt - wb) / Math.max(wt, wb);
     const skewH = Math.abs(hl - hr) / Math.max(hl, hr);
+    
+    // Köşegen kontrolü
+    const diag1 = dist(markers.tl, markers.br);
+    const diag2 = dist(markers.tr, markers.bl);
+    const diagSkew = Math.abs(diag1 - diag2) / Math.max(diag1, diag2);
+    
+    // En-boy oranı
+    const aspectRatio = avgW / avgH;
+    
+    // Strict mod için daha sıkı eşikler
+    const skewLimit = strict ? WARP_SKEW_LIMIT * 0.8 : WARP_SKEW_LIMIT;
+    const diagSkewLimit = strict ? 0.12 : 0.18;
+    
     const reasons = [];
-    if (skewW > WARP_SKEW_LIMIT) reasons.push(`Yatay eğiklik yüksek (${(skewW * 100).toFixed(1)}%)`);
-    if (skewH > WARP_SKEW_LIMIT) reasons.push(`Dikey eğiklik yüksek (${(skewH * 100).toFixed(1)}%)`);
-    if (areaRatio < WARP_AREA_MIN_RATIO) reasons.push(`Form alanı çok küçük (${(areaRatio * 100).toFixed(1)}%)`);
-    return { ok: reasons.length === 0, reasons };
+    
+    if (skewW > skewLimit) {
+        reasons.push(`Yatay eğiklik yüksek (${(skewW * 100).toFixed(1)}%)`);
+    }
+    if (skewH > skewLimit) {
+        reasons.push(`Dikey eğiklik yüksek (${(skewH * 100).toFixed(1)}%)`);
+    }
+    if (diagSkew > diagSkewLimit) {
+        reasons.push(`Köşegenler dengesiz (${(diagSkew * 100).toFixed(1)}%)`);
+    }
+    if (areaRatio < WARP_AREA_MIN_RATIO) {
+        reasons.push(`Form alanı çok küçük (${(areaRatio * 100).toFixed(1)}%)`);
+    }
+    if (areaRatio > WARP_AREA_MAX_RATIO) {
+        reasons.push(`Form alanı çok büyük (${(areaRatio * 100).toFixed(1)}%)`);
+    }
+    if (aspectRatio < 0.4 || aspectRatio > 2.5) {
+        reasons.push(`En-boy oranı anormal (${aspectRatio.toFixed(2)})`);
+    }
+    
+    return { 
+        ok: reasons.length === 0, 
+        reasons,
+        metrics: {
+            skewW,
+            skewH,
+            diagSkew,
+            areaRatio,
+            aspectRatio,
+            avgWidth: avgW,
+            avgHeight: avgH
+        }
+    };
 }
 
 export function analyzeBubbles(warpMat, debugDraw = true) {

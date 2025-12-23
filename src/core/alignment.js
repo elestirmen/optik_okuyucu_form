@@ -26,43 +26,119 @@ const COLORS = {
 };
 
 /**
- * Hedef köşe alanlarını hesapla
+ * Sabit kadraj konfigürasyonu
+ * Form aspect ratio'su (genellikle A4 benzeri dikey format)
+ */
+const FRAME_CONFIG = {
+    // Form aspect ratio (genişlik / yükseklik) - A4 benzeri dikey format
+    formAspectRatio: 0.707, // ~A4 (210/297)
+    // Kadrajın video içindeki oranı (ne kadar büyük olsun)
+    frameScale: 0.85,
+    // Köşe hedef alanı boyutu (sabit piksel değil, frame boyutuna göre oran)
+    cornerSizeRatio: 0.08,
+    // Minimum köşe boyutu (piksel)
+    minCornerSize: 30,
+    // Maximum köşe boyutu (piksel)
+    maxCornerSize: 80
+};
+
+// Son hesaplanan kadraj (cache)
+let lastFrameCache = null;
+let lastVideoDimensions = { width: 0, height: 0 };
+
+/**
+ * Sabit aspect ratio ile kadraj hesapla
+ * Video boyutu ne olursa olsun, kadraj oranları sabit kalır
  */
 export function calculateTargetAreas(videoWidth, videoHeight, margin = 0.08) {
-    const markerSizeRatio = 0.08; // Video boyutuna göre marker boyutu
-    const markerSize = Math.min(videoWidth, videoHeight) * markerSizeRatio;
-    const padding = Math.min(videoWidth, videoHeight) * margin;
+    // Video boyutu değişmediyse cache'den döndür
+    if (lastFrameCache && 
+        lastVideoDimensions.width === videoWidth && 
+        lastVideoDimensions.height === videoHeight) {
+        return lastFrameCache;
+    }
     
-    return {
+    // Video'nun ortasına sabit aspect ratio'lu bir kadraj yerleştir
+    const videoAspect = videoWidth / videoHeight;
+    const formAspect = FRAME_CONFIG.formAspectRatio;
+    
+    let frameWidth, frameHeight, frameX, frameY;
+    
+    // Video aspect ratio'suna göre kadrajı sığdır
+    if (videoAspect > formAspect) {
+        // Video daha geniş - yüksekliğe göre sığdır
+        frameHeight = videoHeight * FRAME_CONFIG.frameScale;
+        frameWidth = frameHeight * formAspect;
+    } else {
+        // Video daha dar - genişliğe göre sığdır
+        frameWidth = videoWidth * FRAME_CONFIG.frameScale;
+        frameHeight = frameWidth / formAspect;
+    }
+    
+    // Kadrajı ortala
+    frameX = (videoWidth - frameWidth) / 2;
+    frameY = (videoHeight - frameHeight) / 2;
+    
+    // Köşe boyutu (sabit oran)
+    const cornerSize = Math.min(
+        FRAME_CONFIG.maxCornerSize,
+        Math.max(
+            FRAME_CONFIG.minCornerSize,
+            Math.min(frameWidth, frameHeight) * FRAME_CONFIG.cornerSizeRatio
+        )
+    );
+    
+    const result = {
         tl: {
-            x: padding,
-            y: padding,
-            width: markerSize * 1.5,
-            height: markerSize * 1.5,
+            x: frameX,
+            y: frameY,
+            width: cornerSize,
+            height: cornerSize,
             label: 'Sol Üst'
         },
         tr: {
-            x: videoWidth - padding - markerSize * 1.5,
-            y: padding,
-            width: markerSize * 1.5,
-            height: markerSize * 1.5,
+            x: frameX + frameWidth - cornerSize,
+            y: frameY,
+            width: cornerSize,
+            height: cornerSize,
             label: 'Sağ Üst'
         },
         bl: {
-            x: padding,
-            y: videoHeight - padding - markerSize * 1.5,
-            width: markerSize * 1.5,
-            height: markerSize * 1.5,
+            x: frameX,
+            y: frameY + frameHeight - cornerSize,
+            width: cornerSize,
+            height: cornerSize,
             label: 'Sol Alt'
         },
         br: {
-            x: videoWidth - padding - markerSize * 1.5,
-            y: videoHeight - padding - markerSize * 1.5,
-            width: markerSize * 1.5,
-            height: markerSize * 1.5,
+            x: frameX + frameWidth - cornerSize,
+            y: frameY + frameHeight - cornerSize,
+            width: cornerSize,
+            height: cornerSize,
             label: 'Sağ Alt'
+        },
+        // Ek bilgiler (çizim için)
+        frame: {
+            x: frameX,
+            y: frameY,
+            width: frameWidth,
+            height: frameHeight
         }
     };
+    
+    // Cache'le
+    lastFrameCache = result;
+    lastVideoDimensions = { width: videoWidth, height: videoHeight };
+    
+    return result;
+}
+
+/**
+ * Kadraj cache'ini sıfırla
+ */
+export function resetFrameCache() {
+    lastFrameCache = null;
+    lastVideoDimensions = { width: 0, height: 0 };
 }
 
 /**
@@ -210,80 +286,97 @@ function checkGeometricQuality(markers, targetAreas) {
  */
 export function drawAlignmentOverlay(ctx, videoWidth, videoHeight, markers, alignment) {
     const targetAreas = calculateTargetAreas(videoWidth, videoHeight);
+    const frame = targetAreas.frame;
     
     ctx.save();
     
+    // Dış alanı karart (kadraj dışı)
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+    // Üst
+    ctx.fillRect(0, 0, videoWidth, frame.y);
+    // Alt
+    ctx.fillRect(0, frame.y + frame.height, videoWidth, videoHeight - frame.y - frame.height);
+    // Sol
+    ctx.fillRect(0, frame.y, frame.x, frame.height);
+    // Sağ
+    ctx.fillRect(frame.x + frame.width, frame.y, videoWidth - frame.x - frame.width, frame.height);
+    
+    // Kadraj çerçevesi
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(frame.x, frame.y, frame.width, frame.height);
+    
     // Köşe hedef alanlarını çiz
     for (const [key, area] of Object.entries(targetAreas)) {
+        if (key === 'frame') continue; // frame bilgisini atla
+        
         const position = alignment?.positions?.[key];
         const detected = position?.detected || false;
         const inTarget = position?.inTarget || false;
-        
-        // Arka plan
-        ctx.fillStyle = detected && inTarget ? 'rgba(0, 255, 0, 0.15)' : 
-                        detected ? 'rgba(255, 165, 0, 0.15)' : 
-                        COLORS.target;
-        ctx.fillRect(area.x, area.y, area.width, area.height);
         
         // Köşe çerçeveleri
         ctx.strokeStyle = detected && inTarget ? COLORS.detected : 
                           detected ? COLORS.warning : 
                           COLORS.missing;
         ctx.lineWidth = 3;
-        ctx.setLineDash(detected ? [] : [8, 8]);
+        ctx.setLineDash(detected ? [] : [6, 4]);
         
-        // Köşe L şeklinde çiz
-        const cornerSize = area.width * 0.3;
+        // Köşe L şeklinde çiz (daha belirgin)
+        const cornerLen = area.width * 0.6;
         ctx.beginPath();
         
-        // Sol üst köşe
         if (key === 'tl') {
-            ctx.moveTo(area.x, area.y + cornerSize);
+            ctx.moveTo(area.x, area.y + cornerLen);
             ctx.lineTo(area.x, area.y);
-            ctx.lineTo(area.x + cornerSize, area.y);
+            ctx.lineTo(area.x + cornerLen, area.y);
         }
-        // Sağ üst köşe
         else if (key === 'tr') {
-            ctx.moveTo(area.x + area.width - cornerSize, area.y);
+            ctx.moveTo(area.x + area.width - cornerLen, area.y);
             ctx.lineTo(area.x + area.width, area.y);
-            ctx.lineTo(area.x + area.width, area.y + cornerSize);
+            ctx.lineTo(area.x + area.width, area.y + cornerLen);
         }
-        // Sol alt köşe
         else if (key === 'bl') {
-            ctx.moveTo(area.x, area.y + area.height - cornerSize);
+            ctx.moveTo(area.x, area.y + area.height - cornerLen);
             ctx.lineTo(area.x, area.y + area.height);
-            ctx.lineTo(area.x + cornerSize, area.y + area.height);
+            ctx.lineTo(area.x + cornerLen, area.y + area.height);
         }
-        // Sağ alt köşe
         else if (key === 'br') {
-            ctx.moveTo(area.x + area.width - cornerSize, area.y + area.height);
+            ctx.moveTo(area.x + area.width - cornerLen, area.y + area.height);
             ctx.lineTo(area.x + area.width, area.y + area.height);
-            ctx.lineTo(area.x + area.width, area.y + area.height - cornerSize);
+            ctx.lineTo(area.x + area.width, area.y + area.height - cornerLen);
         }
         
         ctx.stroke();
         ctx.setLineDash([]);
+        
+        // Tespit edildiyse hedef alanda yeşil nokta
+        if (detected && inTarget) {
+            ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
+            ctx.beginPath();
+            ctx.arc(area.x + area.width / 2, area.y + area.height / 2, area.width / 3, 0, Math.PI * 2);
+            ctx.fill();
+        }
     }
     
     // Tespit edilen marker'ları çiz
     if (markers) {
-        ctx.fillStyle = COLORS.detected;
         for (const [key, marker] of Object.entries(markers)) {
-            if (marker && marker.x && marker.y) {
+            if (key === 'quality') continue; // quality objesini atla
+            if (marker && typeof marker.x === 'number' && typeof marker.y === 'number') {
+                const position = alignment?.positions?.[key];
+                const inTarget = position?.inTarget || false;
+                
+                // Marker noktası
+                ctx.fillStyle = inTarget ? COLORS.detected : COLORS.warning;
                 ctx.beginPath();
-                ctx.arc(marker.x, marker.y, 8, 0, Math.PI * 2);
+                ctx.arc(marker.x, marker.y, 6, 0, Math.PI * 2);
                 ctx.fill();
                 
-                // Bağlantı çizgisi
-                const target = targetAreas[key];
-                if (target) {
-                    ctx.strokeStyle = 'rgba(0, 255, 0, 0.4)';
-                    ctx.lineWidth = 1;
-                    ctx.beginPath();
-                    ctx.moveTo(marker.x, marker.y);
-                    ctx.lineTo(target.x + target.width / 2, target.y + target.height / 2);
-                    ctx.stroke();
-                }
+                // İç nokta
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(marker.x, marker.y, 2, 0, Math.PI * 2);
+                ctx.fill();
             }
         }
     }
@@ -418,6 +511,7 @@ export function drawGrid(ctx, videoWidth, videoHeight, divisions = 3) {
 
 /**
  * Alignment Guide yöneticisi
+ * Basit ve güvenilir versiyon
  */
 export class AlignmentGuide {
     constructor(videoElement, overlayCanvas) {
@@ -428,31 +522,104 @@ export class AlignmentGuide {
         this.lastAlignment = null;
         this.stableCount = 0;
         this.onReady = null;
+        this.lastSourceSize = { width: 0, height: 0 };
+    }
+    
+    /**
+     * Koordinatları dönüştür (kaynak canvas -> video koordinatları)
+     */
+    scaleMarkers(markers, sourceWidth, sourceHeight, targetWidth, targetHeight) {
+        if (!markers) return null;
+        if (sourceWidth <= 0 || sourceHeight <= 0) return markers;
+        if (Math.abs(sourceWidth - targetWidth) < 5 && Math.abs(sourceHeight - targetHeight) < 5) {
+            return markers; // Boyutlar aynı, dönüşüm gereksiz
+        }
+        
+        const scaleX = targetWidth / sourceWidth;
+        const scaleY = targetHeight / sourceHeight;
+        
+        const scaled = {};
+        for (const corner of ['tl', 'tr', 'bl', 'br']) {
+            if (markers[corner] && typeof markers[corner].x === 'number') {
+                scaled[corner] = {
+                    x: markers[corner].x * scaleX,
+                    y: markers[corner].y * scaleY
+                };
+            }
+        }
+        
+        return scaled;
     }
     
     /**
      * Overlay'ı güncelle
+     * @param {Object} markers - Marker pozisyonları
+     * @param {number} sourceWidth - Kaynak canvas genişliği (opsiyonel)
+     * @param {number} sourceHeight - Kaynak canvas yüksekliği (opsiyonel)
      */
-    update(markers) {
-        if (!this.enabled || !this.ctx || !this.video) return;
+    update(markers, sourceWidth = 0, sourceHeight = 0) {
+        if (!this.enabled || !this.ctx || !this.video) return null;
         
-        const vw = this.video.videoWidth || this.overlay.width;
-        const vh = this.video.videoHeight || this.overlay.height;
+        // Video'nun gerçek boyutları
+        const videoWidth = this.video.videoWidth;
+        const videoHeight = this.video.videoHeight;
         
-        // Canvas boyutunu ayarla
-        if (this.overlay.width !== vw || this.overlay.height !== vh) {
-            this.overlay.width = vw;
-            this.overlay.height = vh;
+        if (videoWidth <= 0 || videoHeight <= 0) return null;
+        
+        // Video elementi'nin ekrandaki gerçek boyutu
+        const videoRect = this.video.getBoundingClientRect();
+        const displayWidth = videoRect.width;
+        const displayHeight = videoRect.height;
+        
+        // Video aspect ratio ve container aspect ratio
+        const videoAspect = videoWidth / videoHeight;
+        const containerAspect = displayWidth / displayHeight;
+        
+        // object-fit: contain hesaplaması
+        let renderWidth, renderHeight, offsetX, offsetY;
+        
+        if (videoAspect > containerAspect) {
+            // Video daha geniş, yanlarda boşluk var
+            renderWidth = displayWidth;
+            renderHeight = displayWidth / videoAspect;
+            offsetX = 0;
+            offsetY = (displayHeight - renderHeight) / 2;
+        } else {
+            // Video daha uzun, üst/altta boşluk var
+            renderHeight = displayHeight;
+            renderWidth = displayHeight * videoAspect;
+            offsetX = (displayWidth - renderWidth) / 2;
+            offsetY = 0;
         }
         
-        // Temizle
-        this.ctx.clearRect(0, 0, vw, vh);
+        // Canvas boyutunu ayarla (piksel olarak render boyutu)
+        // Canvas internal resolution = video resolution (kaliteli çizim için)
+        if (this.overlay.width !== videoWidth || this.overlay.height !== videoHeight) {
+            this.overlay.width = videoWidth;
+            this.overlay.height = videoHeight;
+        }
         
-        // Hedef alanları hesapla
-        const targetAreas = calculateTargetAreas(vw, vh);
+        // Canvas CSS boyutunu video render alanıyla eşitle
+        this.overlay.style.width = renderWidth + 'px';
+        this.overlay.style.height = renderHeight + 'px';
+        this.overlay.style.left = offsetX + 'px';
+        this.overlay.style.top = offsetY + 'px';
+        
+        // Temizle
+        this.ctx.clearRect(0, 0, videoWidth, videoHeight);
+        
+        // Kaynak boyut verilmişse koordinat dönüşümü yap (captureCanvas -> video koordinatları)
+        let displayMarkers = markers;
+        if (sourceWidth > 0 && sourceHeight > 0 && 
+            (Math.abs(sourceWidth - videoWidth) > 5 || Math.abs(sourceHeight - videoHeight) > 5)) {
+            displayMarkers = this.scaleMarkers(markers, sourceWidth, sourceHeight, videoWidth, videoHeight);
+        }
+        
+        // Hedef alanları hesapla (video koordinatlarında)
+        const targetAreas = calculateTargetAreas(videoWidth, videoHeight);
         
         // Hizalamayı değerlendir
-        const alignment = assessAlignment(markers, targetAreas);
+        const alignment = assessAlignment(displayMarkers, targetAreas);
         
         // Kararlılık kontrolü
         if (alignment.status === ALIGNMENT_STATUS.READY || 
@@ -468,8 +635,8 @@ export class AlignmentGuide {
         
         this.lastAlignment = alignment;
         
-        // Overlay'ı çiz
-        drawAlignmentOverlay(this.ctx, vw, vh, markers, alignment);
+        // Overlay'ı çiz (video koordinatlarında)
+        drawAlignmentOverlay(this.ctx, videoWidth, videoHeight, displayMarkers, alignment);
         
         return alignment;
     }
@@ -503,6 +670,17 @@ export class AlignmentGuide {
      */
     resetStability() {
         this.stableCount = 0;
+    }
+    
+    /**
+     * Sıfırla
+     */
+    reset() {
+        this.stableCount = 0;
+        this.lastAlignment = null;
+        if (this.ctx) {
+            this.ctx.clearRect(0, 0, this.overlay.width, this.overlay.height);
+        }
     }
 }
 
