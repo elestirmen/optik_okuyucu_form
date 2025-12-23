@@ -5,6 +5,7 @@ import { toggleAutoScan, captureAndProcess, toggleScanSource, handleFileSelect, 
 import { debounce, clampInt } from './utils/helpers.js';
 import { ensureAudioContext } from './core/audio.js';
 import { state } from './features/state.js';
+import { initSettingsPanel, getSettings, getSetting } from './core/settings.js';
 
 // Global exports for debugging if needed
 window.captureAndProcess = captureAndProcess;
@@ -13,6 +14,9 @@ document.addEventListener('DOMContentLoaded', () => {
   setupTabs();
   setupInputs();
   generateForm();
+
+  // Gelişmiş ayarlar panelini başlat
+  initSettingsPanel();
 
   // Setup answer key UI logic (moved here or in results.js, let's keep it here for wiring)
   setupAnswerKeyUI();

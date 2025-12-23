@@ -74,7 +74,7 @@
   <!-- Local OpenCV -->
   <script async src="/libs/opencv.js" onload="cv['onRuntimeInitialized']=onOpenCvReady;"
     onerror="loadOpenCvCdn()"></script>
-  <script type="module" crossorigin src="/assets/index-BEc5si79.js"></script>
+  <script type="module" crossorigin src="/assets/index-2hvvTOj4.js"></script>
 </head>
 
 <body>
@@ -275,7 +275,199 @@
               <label>Eşik: <input type="number" id="fillThreshold" value="0.20" min="0.1" max="0.9" step="0.02"></label>
               <label>Ceza: <input type="number" id="penalty" value="0.25" min="0" max="1" step="0.05"></label>
               <label style="gap:4px;"><input type="checkbox" id="shadowMode"> Gölge modu</label>
+              <button class="btn secondary" id="advancedSettingsBtn" style="padding:4px 8px;font-size:10px;margin-left:auto;">⚙️ Gelişmiş</button>
             </div>
+
+            <!-- Gelişmiş Ayarlar Paneli -->
+            <div class="advanced-settings" id="advancedSettings" style="display:none;">
+              <div class="advanced-settings-header">
+                <h4>⚙️ Gelişmiş OMR Ayarları</h4>
+                <button class="btn secondary" id="resetSettingsBtn" style="padding:3px 8px;font-size:9px;">↺ Varsayılan</button>
+              </div>
+
+              <!-- Preprocessing -->
+              <div class="settings-section">
+                <div class="settings-section-title">🖼️ Görüntü İşleme</div>
+                <div class="settings-grid">
+                  <div class="setting-item">
+                    <label>CLAHE</label>
+                    <input type="checkbox" id="claheEnabled">
+                  </div>
+                  <div class="setting-item">
+                    <label>CLAHE Clip</label>
+                    <input type="number" id="claheClipLimit" value="2.0" min="1" max="5" step="0.5">
+                  </div>
+                  <div class="setting-item">
+                    <label>Blur Sigma</label>
+                    <input type="number" id="blurSigma" value="0" min="0" max="3" step="0.5">
+                  </div>
+                  <div class="setting-item">
+                    <label>Block Size</label>
+                    <select id="blockSize">
+                      <option value="9">9</option>
+                      <option value="11" selected>11</option>
+                      <option value="13">13</option>
+                      <option value="15">15</option>
+                      <option value="17">17</option>
+                    </select>
+                  </div>
+                  <div class="setting-item">
+                    <label>C Değeri</label>
+                    <input type="number" id="cValue" value="2" min="1" max="10" step="1">
+                  </div>
+                  <div class="setting-item">
+                    <label>Gölge Kaldır</label>
+                    <input type="checkbox" id="shadowRemoval">
+                  </div>
+                  <div class="setting-item">
+                    <label>Beyaz Dengesi</label>
+                    <input type="checkbox" id="whiteBalance">
+                  </div>
+                  <div class="setting-item">
+                    <label>Otomatik Ayar</label>
+                    <input type="checkbox" id="autoTuneEnabled" checked>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Marker Tespiti -->
+              <div class="settings-section">
+                <div class="settings-section-title">📍 Marker Tespiti</div>
+                <div class="settings-grid">
+                  <div class="setting-item">
+                    <label>Marker Metodu</label>
+                    <select id="markerMethod">
+                      <option value="auto" selected>Otomatik</option>
+                      <option value="aruco">ArUco</option>
+                      <option value="cross">Cross</option>
+                    </select>
+                  </div>
+                  <div class="setting-item">
+                    <label>Kalite Eşiği</label>
+                    <input type="number" id="markerQualityThreshold" value="0.45" min="0.2" max="0.8" step="0.05">
+                  </div>
+                  <div class="setting-item">
+                    <label>Skew Limit</label>
+                    <input type="number" id="warpSkewLimit" value="0.15" min="0.05" max="0.30" step="0.01">
+                  </div>
+                  <div class="setting-item">
+                    <label>Min Alan %</label>
+                    <input type="number" id="warpAreaMinRatio" value="10" min="5" max="30" step="1">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Baloncuk Analizi -->
+              <div class="settings-section">
+                <div class="settings-section-title">⭕ Baloncuk Analizi</div>
+                <div class="settings-grid">
+                  <div class="setting-item">
+                    <label>ROI Scale</label>
+                    <input type="number" id="roiScale" value="1.04" min="1.00" max="1.20" step="0.02">
+                  </div>
+                  <div class="setting-item">
+                    <label>Mask Ratio</label>
+                    <input type="number" id="maskRatio" value="0.32" min="0.20" max="0.50" step="0.02">
+                  </div>
+                  <div class="setting-item">
+                    <label>Blank Guard</label>
+                    <input type="number" id="blankGuard" value="0.18" min="0.08" max="0.30" step="0.02">
+                  </div>
+                  <div class="setting-item">
+                    <label>Offset Arama</label>
+                    <input type="checkbox" id="offsetSearchEnabled" checked>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Güven & Consensus -->
+              <div class="settings-section">
+                <div class="settings-section-title">📊 Güven & Doğrulama</div>
+                <div class="settings-grid">
+                  <div class="setting-item">
+                    <label>Multi-Read</label>
+                    <input type="checkbox" id="multiReadEnabled">
+                  </div>
+                  <div class="setting-item">
+                    <label>Okuma Sayısı</label>
+                    <input type="number" id="multiReadIterations" value="3" min="2" max="5" step="1">
+                  </div>
+                  <div class="setting-item">
+                    <label>Gap Eşiği</label>
+                    <input type="number" id="gapThreshold" value="0.06" min="0.02" max="0.15" step="0.01">
+                  </div>
+                  <div class="setting-item">
+                    <label>Anomali Tespiti</label>
+                    <input type="checkbox" id="anomalyDetectionEnabled" checked>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Hizalama Rehberi -->
+              <div class="settings-section">
+                <div class="settings-section-title">📐 Hizalama Rehberi</div>
+                <div class="settings-grid">
+                  <div class="setting-item">
+                    <label>Rehber Aktif</label>
+                    <input type="checkbox" id="alignmentGuideEnabled" checked>
+                  </div>
+                  <div class="setting-item">
+                    <label>Izgara Göster</label>
+                    <input type="checkbox" id="showGrid">
+                  </div>
+                  <div class="setting-item">
+                    <label>Hedef Tolerans</label>
+                    <input type="number" id="alignmentTolerance" value="0.30" min="0.10" max="0.50" step="0.05">
+                  </div>
+                  <div class="setting-item">
+                    <label>Oto-Tarama</label>
+                    <input type="checkbox" id="autoScanOnReady">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Performans -->
+              <div class="settings-section">
+                <div class="settings-section-title">⚡ Performans</div>
+                <div class="settings-grid">
+                  <div class="setting-item">
+                    <label>Max Boyut (px)</label>
+                    <input type="number" id="captureMaxDim" value="1280" min="640" max="1920" step="160">
+                  </div>
+                  <div class="setting-item">
+                    <label>Bulanıklık Uyarı</label>
+                    <input type="number" id="blurVarWarn" value="25" min="10" max="50" step="5">
+                  </div>
+                  <div class="setting-item">
+                    <label>Bulanıklık Red</label>
+                    <input type="number" id="blurVarReject" value="12" min="5" max="25" step="1">
+                  </div>
+                  <div class="setting-item">
+                    <label>Debug Çizim</label>
+                    <input type="checkbox" id="debugDrawEnabled" checked>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Preset'ler -->
+              <div class="settings-section">
+                <div class="settings-section-title">💾 Hazır Ayarlar</div>
+                <div class="preset-buttons">
+                  <button class="btn secondary preset-btn" data-preset="balanced">⚖️ Dengeli</button>
+                  <button class="btn secondary preset-btn" data-preset="lowlight">🌙 Düşük Işık</button>
+                  <button class="btn secondary preset-btn" data-preset="highquality">✨ Yüksek Kalite</button>
+                  <button class="btn secondary preset-btn" data-preset="fast">⚡ Hızlı</button>
+                  <button class="btn secondary preset-btn" data-preset="robust">🛡️ Robust</button>
+                </div>
+              </div>
+
+              <div class="settings-footer">
+                <span class="hint">💡 Değişiklikler anında uygulanır</span>
+                <button class="btn secondary" id="exportSettingsBtn" style="padding:4px 8px;font-size:10px;">📤 Ayarları Kaydet</button>
+                <button class="btn secondary" id="importSettingsBtn" style="padding:4px 8px;font-size:10px;">📥 Ayarları Yükle</button>
+              </div>
+            </div>
+
             <div class="log" id="cameraLog">Kaynak seçin ve formu yükleyin.</div>
           </div>
 

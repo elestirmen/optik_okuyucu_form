@@ -11,6 +11,7 @@ import { detectMarkersHybrid, detectCrossMarkers, assessMarkerQuality } from './
 import { advancedPreprocess, assessImageQuality, autoTuneParameters, getAdaptiveFillParams } from './preprocessing.js';
 import { calculateQuestionConfidence, summarizeConfidence, MultiReadConsensus, detectAnomalies, formatConfidenceReport, CONFIDENCE_LEVELS } from './confidence.js';
 import { AlignmentGuide, calculateTargetAreas, assessAlignment, drawAlignmentOverlay, ALIGNMENT_STATUS } from './alignment.js';
+import { getSettings, getSetting, getPreprocessingParams, getFillParams as getSettingsFillParams, getMarkerParams, getPerformanceParams } from './settings.js';
 
 const BASE_FILL_ROI_SCALE = 1.04;
 const BASE_FILL_MASK_RATIO = 0.32;
@@ -35,6 +36,15 @@ let autoTunedParams = null;
 // I will rewrite the whole file to ensure completeness
 
 export function getPreprocessParams() {
+    // Önce settings modülünden parametreleri al
+    try {
+        const params = getPreprocessingParams();
+        if (params) return params;
+    } catch (e) {
+        // Settings modülü yüklenmemişse legacy moda geç
+    }
+    
+    // Legacy fallback
     const shadow = state.shadowMode || (document.getElementById('shadowMode')?.checked);
     if (shadow) {
         return { clahe: true, blurSigma: 1.0, blockSize: 13, cValue: 3, shadowRemoval: true, whiteBalance: true };
@@ -119,6 +129,15 @@ export function updateAlignmentGuide(markers) {
 }
 
 export function getFillParams() {
+    // Önce settings modülünden parametreleri al
+    try {
+        const params = getSettingsFillParams();
+        if (params) return params;
+    } catch (e) {
+        // Settings modülü yüklenmemişse legacy moda geç
+    }
+    
+    // Legacy fallback
     const shadow = state.shadowMode || (document.getElementById('shadowMode')?.checked);
     if (shadow) {
         return { roiScale: 1.02, maskRatio: 0.30, blankGuard: 0.14 };
