@@ -27,7 +27,7 @@ export function setLog(id, msg, type = '') {
     const el = document.getElementById(id);
     if (el) {
         const time = new Date().toLocaleTimeString();
-        const color = type === 'error' ? 'red' : (type === 'success' ? 'green' : '#666');
-        el.innerHTML = `<span style="color:${color}">[${time}] ${msg}</span>`;
+        el.className = type ? `log ${type}` : 'log';
+        el.textContent = `[${time}] ${msg}`;
     }
 }

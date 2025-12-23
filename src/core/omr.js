@@ -171,13 +171,15 @@ function warpPerspectiveWithQrCorrection(src, markers, forceQrCheck = true) {
     const warped = warpPerspective(src, markers);
     const now = Date.now();
     if (!forceQrCheck && lastQrCorner === 'tr' && (now - lastQrCheckAtMs) < 2500) {
-        return { warped, corrected: false, rotationLabel: '' };
+        return { warped, corrected: false, rotationLabel: '', qrChecked: false, qrCorner: lastQrCorner || null, qrData: null };
     }
 
     const qr = findQrCorner(warped);
     lastQrCheckAtMs = now;
     lastQrCorner = qr?.corner || null;
-    if (!qr || qr.corner === 'tr') return { warped, corrected: false, rotationLabel: '' };
+    if (!qr || qr.corner === 'tr') {
+        return { warped, corrected: false, rotationLabel: '', qrChecked: true, qrCorner: qr?.corner || null, qrData: qr?.data || null };
+    }
 
     const remapped = remapMarkersByQrCorner(markers, qr.corner);
     const corrected = warpPerspective(src, remapped);
@@ -185,11 +187,77 @@ function warpPerspectiveWithQrCorrection(src, markers, forceQrCheck = true) {
     if (qr2 && qr2.corner === 'tr') {
         lastQrCorner = 'tr';
         warped.delete();
-        return { warped: corrected, corrected: true, rotationLabel: labelForQrCorner(qr.corner) };
+        return {
+            warped: corrected,
+            corrected: true,
+            rotationLabel: labelForQrCorner(qr.corner),
+            qrChecked: true,
+            qrCorner: qr2.corner,
+            qrData: qr2.data
+        };
     }
 
     corrected.delete();
-    return { warped, corrected: false, rotationLabel: '' };
+    return { warped, corrected: false, rotationLabel: '', qrChecked: true, qrCorner: qr.corner, qrData: qr.data };
+}
+
+function clamp01(v) {
+    return Math.max(0, Math.min(1, v));
+}
+
+function evaluateCrossMarkerQuality(binary, rect) {
+    try {
+        const roi = binary.roi(rect);
+        const w = roi.cols;
+        const h = roi.rows;
+        const size = Math.min(w, h);
+        if (size < 14) { roi.delete(); return 0; }
+
+        const border = Math.max(2, Math.floor(size * 0.2));
+        const lineW = Math.max(2, Math.floor(size * 0.14));
+        const innerW = w - border * 2;
+        const innerH = h - border * 2;
+        if (innerW <= 4 || innerH <= 4) { roi.delete(); return 0; }
+
+        const countRect = (r) => {
+            const sub = roi.roi(r);
+            const n = cv.countNonZero(sub);
+            sub.delete();
+            return n;
+        };
+
+        const top = new cv.Rect(0, 0, w, border);
+        const bottom = new cv.Rect(0, h - border, w, border);
+        const left = new cv.Rect(0, border, border, innerH);
+        const right = new cv.Rect(w - border, border, border, innerH);
+
+        const borderArea = w * border * 2 + innerH * border * 2;
+        const borderWhite = countRect(top) + countRect(bottom) + countRect(left) + countRect(right);
+        const borderRatio = borderArea > 0 ? borderWhite / borderArea : 0;
+
+        const inner = new cv.Rect(border, border, innerW, innerH);
+        const innerArea = innerW * innerH;
+        const innerWhite = countRect(inner);
+        const innerRatio = innerArea > 0 ? innerWhite / innerArea : 0;
+
+        const midX = Math.max(border, Math.min(w - border - lineW, Math.round(w / 2 - lineW / 2)));
+        const midY = Math.max(border, Math.min(h - border - lineW, Math.round(h / 2 - lineW / 2)));
+        const vStrip = new cv.Rect(midX, border, lineW, innerH);
+        const hStrip = new cv.Rect(border, midY, innerW, lineW);
+        const vRatio = (lineW * innerH) > 0 ? countRect(vStrip) / (lineW * innerH) : 0;
+        const hRatio = (innerW * lineW) > 0 ? countRect(hStrip) / (innerW * lineW) : 0;
+
+        roi.delete();
+
+        const borderScore = clamp01((borderRatio - 0.25) / 0.55);
+        const vScore = clamp01((vRatio - 0.20) / 0.65);
+        const hScore = clamp01((hRatio - 0.20) / 0.65);
+        let score = borderScore * 0.35 + vScore * 0.325 + hScore * 0.325;
+        if (innerRatio < 0.06 || innerRatio > 0.90) score *= 0.6;
+        return score;
+    } catch {
+        return 0;
+    }
 }
 
 function scoreBubble(binary, choice, w, h, roiScale, maskRatio, dx = 0, dy = 0) {
@@ -356,13 +424,12 @@ export function processFrame(isAuto) {
         safeAddSessionResult(result);
         if (result.suspicious) {
             updateStatus('error', 'Şüpheli okuma');
-            setLog('omrLog', `⚠️ Okuma şüpheli: ${result.suspiciousReasons.join(', ')}`, 'error');
+            if (!isAuto) setLog('omrLog', `⚠️ Okuma şüpheli: ${result.suspiciousReasons.join(', ')}`, 'error');
         } else {
             playSuccessChime();
+            updateStatus('ready', '✓ Okundu');
+            if (!isAuto) setLog('omrLog', '✓ Tarama tamamlandı', 'success');
         }
-
-        updateStatus('ready', '✓ Okundu');
-        setLog('omrLog', '✓ Tarama tamamlandı', 'success');
 
         warped.delete();
     } catch (e) {
@@ -480,10 +547,12 @@ export function processUploadedFile() {
     updateStatus('scanning', 'Analiz ediliyor...');
 
     if (state.scanMode === 'answerKey') {
-        processAnswerKeyFrame(); // Reuse frame processing as image is already in canvas
+        const ok = processAnswerKeyFrame(); // Reuse frame processing as image is already in canvas
         // Wait, processAnswerKeyFrame calls imread('captureCanvas'). Yes, correct.
-        state.scanMode = 'student';
-        document.getElementById('processFileBtn').textContent = '🔍 Formu Analiz Et';
+        if (ok) {
+            state.scanMode = 'student';
+            document.getElementById('processFileBtn').textContent = '🔍 Formu Analiz Et';
+        }
     } else {
         // Process student form from file (same as processFrame but from canvas, which is already populated)
         // Actually `processFrame` takes from `captureCanvas`.
@@ -540,20 +609,23 @@ export function detectCornerMarkers(binary, overlay) {
 
         const rect = cv.boundingRect(cnt);
         const aspect = rect.width / rect.height;
-        if (aspect > 0.5 && aspect < 2) {
+        if (aspect > 0.55 && aspect < 1.8) {
             const hull = new cv.Mat();
             cv.convexHull(cnt, hull);
             const solidity = area / cv.contourArea(hull);
             hull.delete();
 
             if (solidity > 0.6) {
+                const quality = evaluateCrossMarkerQuality(binary, rect);
+                if (quality < 0.45) continue;
                 candidates.push({
                     center: (() => {
                         const m = cv.moments(cnt, false);
                         if (m.m00) return { x: m.m10 / m.m00, y: m.m01 / m.m00 };
                         return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
                     })(),
-                    rect
+                    rect,
+                    quality
                 });
             }
         }
@@ -563,17 +635,30 @@ export function detectCornerMarkers(binary, overlay) {
     if (candidates.length < 4) return null;
 
     const cx = binary.cols / 2, cy = binary.rows / 2;
+    const maxDim = Math.max(binary.cols, binary.rows) || 1;
     let tl, tr, bl, br;
-    let tlD = Infinity, trD = Infinity, blD = Infinity, brD = Infinity;
+    let tlRank = -Infinity, trRank = -Infinity, blRank = -Infinity, brRank = -Infinity;
 
     for (const c of candidates) {
         const left = c.center.x < cx, top = c.center.y < cy;
         const d = (x, y) => Math.hypot(c.center.x - x, c.center.y - y);
 
-        if (left && top && d(0, 0) < tlD) { tlD = d(0, 0); tl = c; }
-        if (!left && top && d(binary.cols, 0) < trD) { trD = d(binary.cols, 0); tr = c; }
-        if (left && !top && d(0, binary.rows) < blD) { blD = d(0, binary.rows); bl = c; }
-        if (!left && !top && d(binary.cols, binary.rows) < brD) { brD = d(binary.cols, binary.rows); br = c; }
+        if (left && top) {
+            const rank = c.quality * 2 - d(0, 0) / maxDim;
+            if (rank > tlRank) { tlRank = rank; tl = c; }
+        }
+        if (!left && top) {
+            const rank = c.quality * 2 - d(binary.cols, 0) / maxDim;
+            if (rank > trRank) { trRank = rank; tr = c; }
+        }
+        if (left && !top) {
+            const rank = c.quality * 2 - d(0, binary.rows) / maxDim;
+            if (rank > blRank) { blRank = rank; bl = c; }
+        }
+        if (!left && !top) {
+            const rank = c.quality * 2 - d(binary.cols, binary.rows) / maxDim;
+            if (rank > brRank) { brRank = rank; br = c; }
+        }
     }
 
     if (!tl || !tr || !bl || !br) return null;
@@ -706,6 +791,10 @@ export function analyzeBubbles(warpMat, debugDraw = true) {
             status = key && key === candidate.opt ? 'Doğru' : 'Yanlış';
             if (markedLabel === '-') markedLabel = candidate.opt;
             if (status === 'Doğru') correct++; else wrong++;
+            const lowConfidence = second.score >= threshold && stats.gap < 0.06 && best.score < (thresholdEff + 0.08);
+            if (lowConfidence) {
+                suspiciousReasons.push(`S${q.questionNumber}: düşük güven (yakın skor)`);
+            }
         } else {
             blank++;
             if (maxScore >= thresholdEff * 0.6) {
@@ -723,26 +812,64 @@ export function analyzeBubbles(warpMat, debugDraw = true) {
 
     let studentNo = '';
     if (state.layoutConfig?.studentId) {
+        const digitCenterMaskRatio = Math.max(fillParams.maskRatio, 0.34);
+        const digitRoiScale = Math.max(fillParams.roiScale, 1.06);
+        const digitThreshold = Math.min(0.18, Math.max(0.10, threshold * 0.6));
+        const digitBlankGuard = Math.min(0.07, digitThreshold * 0.6);
+        const digitMissing = [];
+        const digitLowConf = [];
+
         for (let col = 0; col < state.layoutConfig.studentId.digits; col++) {
             const colBubbles = state.layoutConfig.studentId.bubbles.filter(b => b.col === col);
-            let best = null, bestScore = 0;
-            for (const b of colBubbles) {
-                const rect = new cv.Rect(
-                    Math.max(0, Math.round(b.x * w - b.width * w / 2)),
-                    Math.max(0, Math.round(b.y * h - b.height * h / 2)),
-                    Math.round(b.width * w), Math.round(b.height * h)
-                );
-                if (rect.x + rect.width > w || rect.y + rect.height > h) continue;
-                const roi = binary.roi(rect);
-                const score = cv.countNonZero(roi) / (rect.width * rect.height);
-                roi.delete();
-                if (score > bestScore) { bestScore = score; best = b.digit; }
+            const entries = colBubbles.map(b => {
+                const centerScore = scoreBubble(binary, b, w, h, digitRoiScale, digitCenterMaskRatio);
+                const fullScore = scoreBubble(binary, b, w, h, digitRoiScale, 1.0);
+                return { opt: String(b.digit), centerScore, fullScore };
+            });
+            const fullScoresSorted = entries.map(e => e.fullScore).sort((a, b) => a - b);
+            const medianFull = fullScoresSorted[Math.floor(fullScoresSorted.length / 2)] ?? 0;
+            const scores = entries.map(e => ({
+                opt: e.opt,
+                score: Math.max(e.centerScore, Math.max(0, e.fullScore - (medianFull + 0.02)))
+            }));
+
+            const stats = getScoreStats(scores, digitThreshold);
+            const best = stats.best;
+            const second = stats.second;
+
+            if (best.score < digitBlankGuard) {
+                studentNo += '?';
+                if (digitMissing.length < 3) digitMissing.push(`H${col + 1}`);
+                continue;
             }
-            studentNo += bestScore >= threshold ? best : '?';
+
+            const gapOk = stats.gap >= 0.05 || best.score >= second.score * 1.25;
+            const ambiguous = second.score >= digitThreshold * 0.9 && stats.gap < 0.05;
+
+            if (best.score >= digitThreshold && gapOk && !ambiguous) {
+                studentNo += best.opt;
+                if (best.score < (digitThreshold + 0.06) || stats.gap < 0.07) {
+                    if (digitLowConf.length < 3) digitLowConf.push(`H${col + 1}`);
+                }
+                continue;
+            }
+
+            if (best.score < digitThreshold && best.score > second.score * 1.8 && best.score >= digitBlankGuard) {
+                studentNo += best.opt;
+                if (digitLowConf.length < 3) digitLowConf.push(`H${col + 1}`);
+                continue;
+            }
+
+            // Ambiguous or too weak.
+            studentNo += '?';
+            if (digitMissing.length < 3) digitMissing.push(`H${col + 1}`);
         }
-    }
-    if (studentNo.includes('?')) {
-        suspiciousReasons.push('Öğrenci no okunamadı');
+
+        if (digitMissing.length) {
+            suspiciousReasons.push(`Öğrenci no okunamadı (${digitMissing.join(', ')})`);
+        } else if (digitLowConf.length) {
+            suspiciousReasons.push(`Öğrenci no düşük güven (${digitLowConf.join(', ')})`);
+        }
     }
 
     binary.delete();
@@ -752,7 +879,7 @@ export function analyzeBubbles(warpMat, debugDraw = true) {
 }
 
 export function processAnswerKeyFrame() {
-    let src, binary, markerOverlay;
+    let src, binary, markerOverlay, warped;
 
     try {
         src = cv.imread('captureCanvas');
@@ -760,7 +887,7 @@ export function processAnswerKeyFrame() {
         if (blurVar !== null && blurVar < BLUR_VAR_REJECT) {
             setLog('cameraLog', `⚠️ Görüntü bulanık (netlik ${blurVar.toFixed(1)}). Telefonu sabitleyip tekrar deneyin.`, 'error');
             updateStatus('error', 'Görüntü bulanık');
-            return;
+            return false;
         }
         binary = preprocessToBinary(src);
 
@@ -770,17 +897,17 @@ export function processAnswerKeyFrame() {
 
         if (!markers) {
             setLog('cameraLog', '⚠️ Köşe markerları bulunamadı', 'error');
-            return;
+            return false;
         }
         const warpCheck = checkWarpQuality(markers, src.cols, src.rows);
         if (!warpCheck.ok) {
             setLog('cameraLog', `⚠️ Eğim/alan kontrolü başarısız: ${warpCheck.reasons.join(', ')}`, 'error');
             updateStatus('error', 'Eğim çok yüksek');
-            return;
+            return false;
         }
 
         const warpOut = warpPerspectiveWithQrCorrection(src, markers);
-        const warped = warpOut.warped;
+        warped = warpOut.warped;
         if (warpOut.corrected) {
             setLog('cameraLog', `↻ Form otomatik döndürüldü (${warpOut.rotationLabel}).`, 'info');
         }
@@ -794,16 +921,23 @@ export function processAnswerKeyFrame() {
 
             state.scanMode = 'student';
             document.getElementById('captureBtn').textContent = '📸 Öğrenci Formu Tara';
-            setLog('cameraLog', `✅ Cevap anahtarı yüklendi! ${Object.keys(state.answerKey).length} cevap okundu.`, 'success');
+            const processBtn = document.getElementById('processFileBtn');
+            if (processBtn) processBtn.textContent = '🔍 Formu Analiz Et';
+            setLog('cameraLog', `✅ Cevap anahtarı yüklendi! ${result.count}/${result.total} cevap okundu.`, 'success');
             updateStatus('ready', '✓ Anahtar Yüklendi');
+            return true;
         } else {
-            setLog('cameraLog', '⚠️ Cevap anahtarı okunamadı, tekrar deneyin', 'error');
+            const detail = Number.isFinite(result?.total) ? ` (${result.count}/${result.total}, min ${result.required})` : '';
+            setLog('cameraLog', `⚠️ Cevap anahtarı eksik/okunamadı${detail}. Tekrar deneyin.`, 'error');
+            updateStatus('error', 'Anahtar eksik');
+            return false;
         }
-
-        warped.delete();
     } catch (e) {
         setLog('cameraLog', 'Hata: ' + e.message, 'error');
+        updateStatus('error', 'Hata');
+        return false;
     } finally {
+        if (warped) warped.delete();
         if (src) src.delete();
         if (binary) binary.delete();
         if (markerOverlay) markerOverlay.delete();
@@ -867,11 +1001,16 @@ function readAnswerKeyFromScan(warpMat) {
 
     binary.delete();
 
-    console.log(`Cevap anahtarı okuma: ${successCount}/${questions.length} başarılı`);
+    const total = questions.length;
+    const minSuccessRatio = 0.85;
+    const required = total > 0 ? Math.max(1, Math.ceil(total * minSuccessRatio)) : 0;
+    console.log(`Cevap anahtarı okuma: ${successCount}/${total} başarılı (min ${required})`);
 
     return {
-        success: successCount > 0,
+        success: total > 0 && successCount >= required,
         answers: answers,
-        count: successCount
+        count: successCount,
+        required,
+        total
     };
 }

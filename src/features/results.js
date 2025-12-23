@@ -96,7 +96,8 @@ export function renderSessionList() {
     }
     const recent = sessionResults.slice(-8).reverse();
     listEl.innerHTML = recent.map(r => {
-        return `<div>#${r.id} - ${r.studentNo || 'Bilinmiyor'} | D:${r.correct} Y:${r.wrong} B:${r.blank} C:${r.multi} Net:${r.net}</div>`;
+        const flag = r.suspicious ? '⚠️ ' : '';
+        return `<div>${flag}#${r.id} - ${r.studentNo || 'Bilinmiyor'} | D:${r.correct} Y:${r.wrong} B:${r.blank} C:${r.multi} Net:${r.net}</div>`;
     }).join('');
 }
 
