@@ -74,7 +74,7 @@
   <!-- Local OpenCV -->
   <script async src="/libs/opencv.js" onload="cv['onRuntimeInitialized']=onOpenCvReady;"
     onerror="loadOpenCvCdn()"></script>
-  <script type="module" crossorigin src="/assets/index-DWG3ryoy.js"></script>
+  <script type="module" crossorigin src="/assets/index-Bhb3bnXk.js"></script>
 </head>
 
 <body>
@@ -97,56 +97,56 @@
             <div class="hint">Kompakt optik form tasarımı - tüm boyutlar ayarlanabilir</div>
 
             <div class="param-grid">
-              <div><label>Soru Sayısı</label><input type="number" id="questionCount" min="1" max="200" value="30"></div>
-              <div><label>Şık Sayısı</label>
-                <select id="choiceCount">
+              <div><label title="Formda toplam kaç soru olacağını belirler (1-200 arası)">Soru Sayısı</label><input type="number" id="questionCount" min="1" max="200" value="30" title="Formda toplam kaç soru olacağını belirler (1-200 arası)"></div>
+              <div><label title="Her soru için kaç cevap seçeneği olacağını belirler. 4 şık: A-D, 5 şık: A-E">Şık Sayısı</label>
+                <select id="choiceCount" title="Her soru için kaç cevap seçeneği olacağını belirler. 4 şık: A-D, 5 şık: A-E">
                   <option value="4">4 (A-D)</option>
                   <option value="5" selected>5 (A-E)</option>
                 </select>
               </div>
-              <div><label>Soru Sütunu</label>
-                <select id="columnCount">
+              <div><label title="Soruların kaç sütun halinde dizileceğini belirler. Daha fazla sütun = daha kompakt form">Soru Sütunu</label>
+                <select id="columnCount" title="Soruların kaç sütun halinde dizileceğini belirler. Daha fazla sütun = daha kompakt form">
                   <option value="1">1</option>
                   <option value="2" selected>2</option>
                   <option value="3">3</option>
                   <option value="4">4</option>
                 </select>
               </div>
-              <div><label>Öğr. No Hane</label><input type="number" id="studentDigits" min="4" max="15" value="10"></div>
-              <div><label>Cevap Anahtarı</label>
-                <select id="showAnswerKey">
+              <div><label title="Öğrenci numarası için kaç basamaklı alan oluşturulacağını belirler">Öğr. No Hane</label><input type="number" id="studentDigits" min="4" max="15" value="10" title="Öğrenci numarası için kaç basamaklı alan oluşturulacağını belirler"></div>
+              <div><label title="Form üzerinde cevap anahtarı işaretleme alanının gösterilip gösterilmeyeceğini belirler">Cevap Anahtarı</label>
+                <select id="showAnswerKey" title="Form üzerinde cevap anahtarı işaretleme alanının gösterilip gösterilmeyeceğini belirler">
                   <option value="yes" selected>Göster</option>
                   <option value="no">Gizle</option>
                 </select>
               </div>
-              <div><label>Anahtar Şık</label><input type="number" id="answerKeyChoices" min="4" max="10" value="10">
+              <div><label title="Cevap anahtarı alanında kaç farklı şık seçeneği olacağını belirler (A'dan başlayarak)">Anahtar Şık</label><input type="number" id="answerKeyChoices" min="4" max="10" value="10" title="Cevap anahtarı alanında kaç farklı şık seçeneği olacağını belirler (A'dan başlayarak)">
               </div>
             </div>
 
             <div class="param-grid" style="margin-top:8px;">
-              <div><label>Form Genişlik (px)</label><input type="number" id="formWidth" min="300" max="1200" value="350"
-                  step="50"></div>
-              <div><label>Form Yükseklik (px)</label><input type="number" id="formHeight" min="400" max="2000"
-                  value="600" step="50"></div>
-              <div><label>Baloncuk Boyutu</label><input type="number" id="bubbleSize" min="8" max="24" value="15"
-                  step="1"></div>
-              <div><label>Satır Aralığı</label><input type="number" id="rowGap" min="1" max="20" value="4" step="1">
+              <div><label title="Formun piksel cinsinden genişliğini belirler. Yazdırma kalitesi için önemli">Form Genişlik (px)</label><input type="number" id="formWidth" min="300" max="1200" value="350"
+                  step="50" title="Formun piksel cinsinden genişliğini belirler. Yazdırma kalitesi için önemli"></div>
+              <div><label title="Formun piksel cinsinden yüksekliğini belirler. Soru sayısına göre ayarlayın">Form Yükseklik (px)</label><input type="number" id="formHeight" min="400" max="2000"
+                  value="600" step="50" title="Formun piksel cinsinden yüksekliğini belirler. Soru sayısına göre ayarlayın"></div>
+              <div><label title="İşaretleme baloncuklarının çapını piksel cinsinden belirler. Büyük = kolay işaretleme, küçük = kompakt form">Baloncuk Boyutu</label><input type="number" id="bubbleSize" min="8" max="24" value="15"
+                  step="1" title="İşaretleme baloncuklarının çapını piksel cinsinden belirler. Büyük = kolay işaretleme, küçük = kompakt form"></div>
+              <div><label title="Soru satırları arasındaki boşluğu piksel cinsinden belirler. Daha az = kompakt, daha fazla = okunabilir">Satır Aralığı</label><input type="number" id="rowGap" min="1" max="20" value="4" step="1" title="Soru satırları arasındaki boşluğu piksel cinsinden belirler. Daha az = kompakt, daha fazla = okunabilir">
               </div>
-              <div><label>Kalite Çarpanı</label>
-                <select id="qualityScale">
+              <div><label title="PNG çıktı kalitesini belirler. 1x=hızlı/düşük, 4x=yavaş/yüksek kalite. Yazdırma için 2x veya üzeri önerilir">Kalite Çarpanı</label>
+                <select id="qualityScale" title="PNG çıktı kalitesini belirler. 1x=hızlı/düşük, 4x=yavaş/yüksek kalite. Yazdırma için 2x veya üzeri önerilir">
                   <option value="1">1x (Hızlı)</option>
                   <option value="2" selected>2x (Normal)</option>
                   <option value="3">3x (Yüksek)</option>
                   <option value="4">4x (Çok Yüksek)</option>
                 </select>
               </div>
-              <div><label>Harf Tekrar (soru)</label><input type="number" id="headerRepeat" min="3" max="20" value="5"
-                  step="1"></div>
+              <div><label title="Şık harflerinin (A,B,C...) kaç soruda bir tekrar edileceğini belirler. Uzun formlarda okunabilirliği artırır">Harf Tekrar (soru)</label><input type="number" id="headerRepeat" min="3" max="20" value="5"
+                  step="1" title="Şık harflerinin (A,B,C...) kaç soruda bir tekrar edileceğini belirler. Uzun formlarda okunabilirliği artırır"></div>
             </div>
 
             <div class="param-grid" style="margin-top:8px;">
-              <div><label>Sınav Kodu</label><input type="text" id="examId" value="SINAV-001"></div>
-              <div><label>Web Adresi</label><input type="text" id="webUrl" value="optikform.com"></div>
+              <div><label title="Sınavı tanımlayan benzersiz kod. QR kodunda ve dosya adında kullanılır">Sınav Kodu</label><input type="text" id="examId" value="SINAV-001" title="Sınavı tanımlayan benzersiz kod. QR kodunda ve dosya adında kullanılır"></div>
+              <div><label title="Form üzerindeki QR kodunda görünecek web adresi">Web Adresi</label><input type="text" id="webUrl" value="optikform.com" title="Form üzerindeki QR kodunda görünecek web adresi"></div>
             </div>
 
             <div class="btn-group">
@@ -175,15 +175,15 @@
 
             <div class="param-grid" style="margin-bottom:10px;">
               <div>
-                <label>Anahtar Kaynağı</label>
-                <select id="answerKeySource">
+                <label title="Cevap anahtarını nasıl gireceğinizi seçin">Anahtar Kaynağı</label>
+                <select id="answerKeySource" title="Manuel: Cevapları elle girin. Tarayarak: Dolu bir cevap anahtarı formunu tarayın">
                   <option value="manual" selected>Manuel Giriş</option>
                   <option value="scan">Tarayarak Yükle</option>
                 </select>
               </div>
               <div>
-                <label>Soru Sayısı</label>
-                <input type="number" id="answerKeyCount" min="1" max="200" value="30">
+                <label title="Cevap anahtarındaki toplam soru sayısı">Soru Sayısı</label>
+                <input type="number" id="answerKeyCount" min="1" max="200" value="30" title="Cevap anahtarı için soru sayısı (1-200). Form ayarlarındaki soru sayısıyla eşleşmeli">
               </div>
             </div>
 
@@ -220,8 +220,8 @@
 
             <div class="param-grid" style="margin-bottom:10px;">
               <div>
-                <label>Kaynak</label>
-                <select id="scanSource">
+                <label title="Form görüntüsünü nereden alacağınızı seçin">Kaynak</label>
+                <select id="scanSource" title="Kamera: Canlı kamera görüntüsü. Dosya: Önceden çekilmiş fotoğraf yükleyin">
                   <option value="camera" selected>📷 Kamera</option>
                   <option value="file">📁 Dosyadan Yükle</option>
                 </select>
@@ -229,8 +229,8 @@
             </div>
             <div class="param-grid" id="cameraSelectRow" style="margin-bottom:10px;">
               <div>
-                <label>Kamera</label>
-                <select id="cameraSelect">
+                <label title="Kullanılacak kamerayı seçin. Mobilde arka kamera önerilir">Kamera</label>
+                <select id="cameraSelect" title="Otomatik: Arka kamerayı tercih eder. Birden fazla kamera varsa listeden seçebilirsiniz">
                   <option value="">Otomatik (arka kamera)</option>
                 </select>
               </div>
@@ -272,10 +272,10 @@
             </div>
 
             <div class="settings-row">
-              <label>Eşik: <input type="number" id="fillThreshold" value="0.20" min="0.1" max="0.9" step="0.02"></label>
-              <label>Ceza: <input type="number" id="penalty" value="0.25" min="0" max="1" step="0.05"></label>
-              <label style="gap:4px;"><input type="checkbox" id="shadowMode"> Gölge modu</label>
-              <button class="btn secondary" id="advancedSettingsBtn" style="padding:4px 8px;font-size:10px;margin-left:auto;">⚙️ Gelişmiş</button>
+              <label title="Baloncuğun 'dolu' sayılması için gereken minimum doluluk oranı. Düşük değer = hassas, yüksek = katı">Eşik: <input type="number" id="fillThreshold" value="0.20" min="0.1" max="0.9" step="0.02" title="Baloncuğun 'dolu' sayılması için gereken minimum doluluk oranı (0.1-0.9). Düşük = hassas okuma, yüksek = sadece tam dolu baloncuklar"></label>
+              <label title="Yanlış cevap başına düşülecek puan cezası. 0.25 = 4 yanlış 1 doğruyu götürür">Ceza: <input type="number" id="penalty" value="0.25" min="0" max="1" step="0.05" title="Yanlış cevap başına düşülecek puan cezası. 0 = ceza yok, 0.25 = 4 yanlış 1 doğruyu götürür, 0.33 = 3 yanlış 1 doğruyu götürür"></label>
+              <label style="gap:4px;" title="Gölgeli veya düşük kontrastlı formlarda okumayı iyileştirir"><input type="checkbox" id="shadowMode" title="Gölgeli veya düşük kontrastlı formlarda okumayı iyileştirir"> Gölge modu</label>
+              <button class="btn secondary" id="advancedSettingsBtn" style="padding:4px 8px;font-size:10px;margin-left:auto;" title="Görüntü işleme, marker tespiti ve baloncuk analizi için detaylı ayarları göster">⚙️ Gelişmiş</button>
             </div>
 
             <!-- Gelişmiş Ayarlar Paneli -->
@@ -290,20 +290,20 @@
                 <div class="settings-section-title">🖼️ Görüntü İşleme</div>
                 <div class="settings-grid">
                   <div class="setting-item">
-                    <label>CLAHE</label>
-                    <input type="checkbox" id="claheEnabled">
+                    <label title="CLAHE (Contrast Limited Adaptive Histogram Equalization): Düşük kontrastlı görüntülerde detayları artırır">CLAHE</label>
+                    <input type="checkbox" id="claheEnabled" title="CLAHE kontrast iyileştirmesini etkinleştirir. Düşük ışıkta veya soluk baskılarda faydalı">
                   </div>
                   <div class="setting-item">
-                    <label>CLAHE Clip</label>
-                    <input type="number" id="claheClipLimit" value="2.0" min="1" max="5" step="0.5">
+                    <label title="CLAHE algoritmasının kontrast sınırı. Yüksek değer = daha agresif kontrast artışı, gürültü artabilir">CLAHE Clip</label>
+                    <input type="number" id="claheClipLimit" value="2.0" min="1" max="5" step="0.5" title="CLAHE kontrast sınırı (1-5). 2.0 dengeli, 3+ agresif ama gürültülü olabilir">
                   </div>
                   <div class="setting-item">
-                    <label>Blur Sigma</label>
-                    <input type="number" id="blurSigma" value="0" min="0" max="3" step="0.5">
+                    <label title="Gaussian bulanıklaştırma miktarı. Gürültüyü azaltır ama keskinliği düşürür">Blur Sigma</label>
+                    <input type="number" id="blurSigma" value="0" min="0" max="3" step="0.5" title="Bulanıklaştırma (0-3). 0 = kapalı, 1+ = gürültü azaltma. Çok yüksek değer detay kaybına yol açar">
                   </div>
                   <div class="setting-item">
-                    <label>Block Size</label>
-                    <select id="blockSize">
+                    <label title="Adaptif eşikleme için blok boyutu. Büyük değer = daha pürüzsüz ama yerel detay kaybı">Block Size</label>
+                    <select id="blockSize" title="Adaptif eşikleme blok boyutu. 11 dengeli, 15+ düzgün yüzeyler, 9 detaylı ama gürültülü">
                       <option value="9">9</option>
                       <option value="11" selected>11</option>
                       <option value="13">13</option>
@@ -312,20 +312,20 @@
                     </select>
                   </div>
                   <div class="setting-item">
-                    <label>C Değeri</label>
-                    <input type="number" id="cValue" value="2" min="1" max="10" step="1">
+                    <label title="Adaptif eşikleme sabiti. Yüksek değer = daha koyu eşik, açık renkli işaretler için artırın">C Değeri</label>
+                    <input type="number" id="cValue" value="2" min="1" max="10" step="1" title="Eşikleme sabiti (1-10). 2 standart, açık kalem için 4+, koyu kalem için 1-2">
                   </div>
                   <div class="setting-item">
-                    <label>Gölge Kaldır</label>
-                    <input type="checkbox" id="shadowRemoval">
+                    <label title="Görüntüdeki gölgeleri tespit edip kaldırmaya çalışır. Eğri kağıt veya yan aydınlatmada faydalı">Gölge Kaldır</label>
+                    <input type="checkbox" id="shadowRemoval" title="Gölge kaldırma algoritmasını etkinleştirir. Eğri kağıt veya yan ışıkta işe yarar">
                   </div>
                   <div class="setting-item">
-                    <label>Beyaz Dengesi</label>
-                    <input type="checkbox" id="whiteBalance">
+                    <label title="Görüntünün renk dengesini otomatik ayarlar. Sararmış kağıt veya renkli ışıkta faydalı">Beyaz Dengesi</label>
+                    <input type="checkbox" id="whiteBalance" title="Otomatik beyaz dengesi. Sararmış kağıt, floresan veya LED aydınlatmada renk düzeltmesi yapar">
                   </div>
                   <div class="setting-item">
-                    <label>Otomatik Ayar</label>
-                    <input type="checkbox" id="autoTuneEnabled" checked>
+                    <label title="Görüntü kalitesine göre parametreleri otomatik ayarlar. Çoğu durumda açık bırakın">Otomatik Ayar</label>
+                    <input type="checkbox" id="autoTuneEnabled" checked title="Görüntü analiz edilerek en uygun ayarlar otomatik seçilir. Kapatırsanız manuel değerler kullanılır">
                   </div>
                 </div>
               </div>
@@ -335,24 +335,24 @@
                 <div class="settings-section-title">📍 Marker Tespiti</div>
                 <div class="settings-grid">
                   <div class="setting-item">
-                    <label>Marker Metodu</label>
-                    <select id="markerMethod">
+                    <label title="Form köşelerini bulmak için kullanılacak yöntem. Otomatik en iyisini seçer">Marker Metodu</label>
+                    <select id="markerMethod" title="Otomatik: En uygun yöntemi seçer. ArUco: Kare kodlu markerlar. Cross: Artı işareti markerlar">
                       <option value="auto" selected>Otomatik</option>
                       <option value="aruco">ArUco</option>
                       <option value="cross">Cross</option>
                     </select>
                   </div>
                   <div class="setting-item">
-                    <label>Kalite Eşiği</label>
-                    <input type="number" id="markerQualityThreshold" value="0.45" min="0.2" max="0.8" step="0.05">
+                    <label title="Marker tespiti için minimum kalite skoru. Düşük = daha toleranslı ama hatalı tespit riski">Kalite Eşiği</label>
+                    <input type="number" id="markerQualityThreshold" value="0.45" min="0.2" max="0.8" step="0.05" title="Marker kalite eşiği (0.2-0.8). 0.45 dengeli, 0.3 toleranslı, 0.6+ katı">
                   </div>
                   <div class="setting-item">
-                    <label>Skew Limit</label>
-                    <input type="number" id="warpSkewLimit" value="0.15" min="0.05" max="0.30" step="0.01">
+                    <label title="İzin verilen maksimum eğiklik oranı. Yüksek değer = daha eğik formları kabul eder">Skew Limit</label>
+                    <input type="number" id="warpSkewLimit" value="0.15" min="0.05" max="0.30" step="0.01" title="Maksimum eğiklik limiti (0.05-0.30). 0.15 standart, 0.25+ çok eğik formlar için">
                   </div>
                   <div class="setting-item">
-                    <label>Min Alan %</label>
-                    <input type="number" id="warpAreaMinRatio" value="10" min="5" max="30" step="1">
+                    <label title="Formun görüntüdeki minimum alan yüzdesi. Çok uzaktan çekimleri reddetmek için">Min Alan %</label>
+                    <input type="number" id="warpAreaMinRatio" value="10" min="5" max="30" step="1" title="Minimum form alanı yüzdesi (5-30). 10% standart, küçük formlar için 5%, büyük formlar için 20%">
                   </div>
                 </div>
               </div>
@@ -362,20 +362,20 @@
                 <div class="settings-section-title">⭕ Baloncuk Analizi</div>
                 <div class="settings-grid">
                   <div class="setting-item">
-                    <label>ROI Scale</label>
-                    <input type="number" id="roiScale" value="1.04" min="1.00" max="1.20" step="0.02">
+                    <label title="Baloncuk arama alanının ölçek faktörü. Küçük kaymalar için tolerans sağlar">ROI Scale</label>
+                    <input type="number" id="roiScale" value="1.04" min="1.00" max="1.20" step="0.02" title="ROI büyütme faktörü (1.00-1.20). 1.04 standart, hizalama sorunlarında 1.08+ deneyin">
                   </div>
                   <div class="setting-item">
-                    <label>Mask Ratio</label>
-                    <input type="number" id="maskRatio" value="0.32" min="0.20" max="0.50" step="0.02">
+                    <label title="Baloncuk içi analiz için merkez maskeleme oranı. Kenar efektlerini yok sayar">Mask Ratio</label>
+                    <input type="number" id="maskRatio" value="0.32" min="0.20" max="0.50" step="0.02" title="Merkez maske oranı (0.20-0.50). 0.32 standart, küçük baloncuklarda 0.25, büyüklerde 0.40">
                   </div>
                   <div class="setting-item">
-                    <label>Blank Guard</label>
-                    <input type="number" id="blankGuard" value="0.18" min="0.08" max="0.30" step="0.02">
+                    <label title="Boş baloncuk için maksimum doluluk oranı. Bu değerin altındaki baloncuklar 'boş' sayılır">Blank Guard</label>
+                    <input type="number" id="blankGuard" value="0.18" min="0.08" max="0.30" step="0.02" title="Boş baloncuk eşiği (0.08-0.30). Bu oranın altındaki baloncuklar boş kabul edilir">
                   </div>
                   <div class="setting-item">
-                    <label>Offset Arama</label>
-                    <input type="checkbox" id="offsetSearchEnabled" checked>
+                    <label title="Baloncuk pozisyonlarını dinamik olarak arayarak en iyi eşleşmeyi bulur">Offset Arama</label>
+                    <input type="checkbox" id="offsetSearchEnabled" checked title="Baloncuk pozisyon araması. Küçük hizalama hatalarını telafi eder, kapatmak hızlandırır">
                   </div>
                 </div>
               </div>
@@ -385,20 +385,20 @@
                 <div class="settings-section-title">📊 Güven & Doğrulama</div>
                 <div class="settings-grid">
                   <div class="setting-item">
-                    <label>Multi-Read</label>
-                    <input type="checkbox" id="multiReadEnabled">
+                    <label title="Aynı formu birden fazla kez okuyup sonuçları karşılaştırarak doğruluk artırır">Multi-Read</label>
+                    <input type="checkbox" id="multiReadEnabled" title="Çoklu okuma modu. Her kare birden fazla analiz edilir ve en tutarlı sonuç seçilir">
                   </div>
                   <div class="setting-item">
-                    <label>Okuma Sayısı</label>
-                    <input type="number" id="multiReadIterations" value="3" min="2" max="5" step="1">
+                    <label title="Multi-Read modunda kaç kez okunacağını belirler">Okuma Sayısı</label>
+                    <input type="number" id="multiReadIterations" value="3" min="2" max="5" step="1" title="Multi-Read tekrar sayısı (2-5). Daha fazla = daha güvenilir ama yavaş">
                   </div>
                   <div class="setting-item">
-                    <label>Gap Eşiği</label>
-                    <input type="number" id="gapThreshold" value="0.06" min="0.02" max="0.15" step="0.01">
+                    <label title="İki baloncuk arasındaki minimum doluluk farkı. Bu farkın altında belirsiz kabul edilir">Gap Eşiği</label>
+                    <input type="number" id="gapThreshold" value="0.06" min="0.02" max="0.15" step="0.01" title="Minimum fark eşiği (0.02-0.15). İki şık çok yakın değerde ise uyarı verir">
                   </div>
                   <div class="setting-item">
-                    <label>Anomali Tespiti</label>
-                    <input type="checkbox" id="anomalyDetectionEnabled" checked>
+                    <label title="Beklenmeyen desenleri (tüm boş, tüm dolu, çoklu işaret) tespit edip uyarır">Anomali Tespiti</label>
+                    <input type="checkbox" id="anomalyDetectionEnabled" checked title="Anormal işaretleme tespiti. Şüpheli cevap kalıplarını raporlar">
                   </div>
                 </div>
               </div>
@@ -408,20 +408,20 @@
                 <div class="settings-section-title">📐 Hizalama Rehberi</div>
                 <div class="settings-grid">
                   <div class="setting-item">
-                    <label>Rehber Aktif</label>
-                    <input type="checkbox" id="alignmentGuideEnabled" checked>
+                    <label title="Kamera görüntüsü üzerinde form hizalama yardımcısını gösterir">Rehber Aktif</label>
+                    <input type="checkbox" id="alignmentGuideEnabled" checked title="Hizalama rehberi. Formu doğru konumlandırmanıza yardımcı olur">
                   </div>
                   <div class="setting-item">
-                    <label>Izgara Göster</label>
-                    <input type="checkbox" id="showGrid">
+                    <label title="Kamera görüntüsü üzerinde yardımcı ızgara çizgileri gösterir">Izgara Göster</label>
+                    <input type="checkbox" id="showGrid" title="Hizalama ızgarası. Form kenarlarını düzgün hizalamanıza yardımcı olur">
                   </div>
                   <div class="setting-item">
-                    <label>Hedef Tolerans</label>
-                    <input type="number" id="alignmentTolerance" value="0.30" min="0.10" max="0.50" step="0.05">
+                    <label title="Hizalama başarılı sayılması için gereken tolerans. Düşük = daha hassas hizalama gerekir">Hedef Tolerans</label>
+                    <input type="number" id="alignmentTolerance" value="0.30" min="0.10" max="0.50" step="0.05" title="Hizalama toleransı (0.10-0.50). 0.30 standart, 0.15 hassas, 0.45 gevşek">
                   </div>
                   <div class="setting-item">
-                    <label>Oto-Tarama</label>
-                    <input type="checkbox" id="autoScanOnReady">
+                    <label title="Form düzgün hizalandığında otomatik olarak tarama başlatır">Oto-Tarama</label>
+                    <input type="checkbox" id="autoScanOnReady" title="Otomatik tarama. Form hizalandığında beklemeden tarar - hızlı toplu okuma için">
                   </div>
                 </div>
               </div>
@@ -431,33 +431,33 @@
                 <div class="settings-section-title">⚡ Performans</div>
                 <div class="settings-grid">
                   <div class="setting-item">
-                    <label>Max Boyut (px)</label>
-                    <input type="number" id="captureMaxDim" value="1280" min="640" max="1920" step="160">
+                    <label title="Yakalanan görüntünün maksimum boyutu. Küçük = hızlı işlem, büyük = detaylı analiz">Max Boyut (px)</label>
+                    <input type="number" id="captureMaxDim" value="1280" min="640" max="1920" step="160" title="Görüntü boyutu (640-1920px). 1280 dengeli, 960 hızlı, 1600+ yüksek detay">
                   </div>
                   <div class="setting-item">
-                    <label>Bulanıklık Uyarı</label>
-                    <input type="number" id="blurVarWarn" value="25" min="10" max="50" step="5">
+                    <label title="Bu değerin altında bulanıklık uyarısı verilir. Laplacian varyansı ölçüsü">Bulanıklık Uyarı</label>
+                    <input type="number" id="blurVarWarn" value="25" min="10" max="50" step="5" title="Bulanıklık uyarı eşiği (10-50). Bu değerin altında 'bulanık olabilir' uyarısı">
                   </div>
                   <div class="setting-item">
-                    <label>Bulanıklık Red</label>
-                    <input type="number" id="blurVarReject" value="12" min="5" max="25" step="1">
+                    <label title="Bu değerin altında görüntü reddedilir. Çok bulanık görüntüleri engeller">Bulanıklık Red</label>
+                    <input type="number" id="blurVarReject" value="12" min="5" max="25" step="1" title="Bulanıklık red eşiği (5-25). Bu değerin altındaki görüntüler 'çok bulanık' olarak reddedilir">
                   </div>
                   <div class="setting-item">
-                    <label>Debug Çizim</label>
-                    <input type="checkbox" id="debugDrawEnabled" checked>
+                    <label title="Sonuç görüntülerinde debug bilgilerini (marker çerçeveleri, baloncuk durumları) gösterir">Debug Çizim</label>
+                    <input type="checkbox" id="debugDrawEnabled" checked title="Debug görselleştirme. Marker ve baloncuk tespitini görsel olarak gösterir">
                   </div>
                 </div>
               </div>
 
               <!-- Preset'ler -->
               <div class="settings-section">
-                <div class="settings-section-title">💾 Hazır Ayarlar</div>
+                <div class="settings-section-title" title="Farklı ortamlar için optimize edilmiş hazır ayar setleri">💾 Hazır Ayarlar</div>
                 <div class="preset-buttons">
-                  <button class="btn secondary preset-btn" data-preset="balanced">⚖️ Dengeli</button>
-                  <button class="btn secondary preset-btn" data-preset="lowlight">🌙 Düşük Işık</button>
-                  <button class="btn secondary preset-btn" data-preset="highquality">✨ Yüksek Kalite</button>
-                  <button class="btn secondary preset-btn" data-preset="fast">⚡ Hızlı</button>
-                  <button class="btn secondary preset-btn" data-preset="robust">🛡️ Robust</button>
+                  <button class="btn secondary preset-btn" data-preset="balanced" title="Çoğu durum için dengeli ayarlar. Hız ve doğruluk arasında optimum denge">⚖️ Dengeli</button>
+                  <button class="btn secondary preset-btn" data-preset="lowlight" title="Düşük ışık, gölgeli ortamlar için. CLAHE ve gölge kaldırma aktif">🌙 Düşük Işık</button>
+                  <button class="btn secondary preset-btn" data-preset="highquality" title="En yüksek doğruluk için. Multi-read ve tüm iyileştirmeler aktif, yavaş">✨ Yüksek Kalite</button>
+                  <button class="btn secondary preset-btn" data-preset="fast" title="Hızlı toplu tarama için. Minimum işleme, hızlı sonuç">⚡ Hızlı</button>
+                  <button class="btn secondary preset-btn" data-preset="robust" title="Zor koşullar için. Eğik, buruşuk, düşük kalite baskılar">🛡️ Robust</button>
                 </div>
               </div>
 
