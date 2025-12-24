@@ -74,7 +74,7 @@
   <!-- Local OpenCV -->
   <script async src="/libs/opencv.js" onload="cv['onRuntimeInitialized']=onOpenCvReady;"
     onerror="loadOpenCvCdn()"></script>
-  <script type="module" crossorigin src="/assets/index-Bhb3bnXk.js"></script>
+  <script type="module" crossorigin src="/assets/index-B33R2L8W.js"></script>
 </head>
 
 <body>
@@ -97,56 +97,56 @@
             <div class="hint">Kompakt optik form tasarımı - tüm boyutlar ayarlanabilir</div>
 
             <div class="param-grid">
-              <div><label title="Formda toplam kaç soru olacağını belirler (1-200 arası)">Soru Sayısı</label><input type="number" id="questionCount" min="1" max="200" value="30" title="Formda toplam kaç soru olacağını belirler (1-200 arası)"></div>
-              <div><label title="Her soru için kaç cevap seçeneği olacağını belirler. 4 şık: A-D, 5 şık: A-E">Şık Sayısı</label>
-                <select id="choiceCount" title="Her soru için kaç cevap seçeneği olacağını belirler. 4 şık: A-D, 5 şık: A-E">
+              <div><label title="📝 SORU SAYISI: Formda toplam kaç adet soru bulunacağını belirler. Örneğin 30 soruluk bir sınav için 30 yazın. Form boyutunu soru sayısına göre ayarlamayı unutmayın - çok fazla soru küçük bir forma sığmayabilir. Maksimum 200 soru desteklenir.">Soru Sayısı</label><input type="number" id="questionCount" min="1" max="200" value="30" title="📝 SORU SAYISI: Formda toplam kaç adet soru bulunacağını belirler. Örneğin 30 soruluk bir sınav için 30 yazın. Form boyutunu soru sayısına göre ayarlamayı unutmayın - çok fazla soru küçük bir forma sığmayabilir. Maksimum 200 soru desteklenir."></div>
+              <div><label title="🔤 ŞIK SAYISI: Her soru için kaç cevap seçeneği (baloncuk) olacağını belirler. 4 şık seçerseniz A, B, C, D seçenekleri oluşur. 5 şık seçerseniz A, B, C, D, E seçenekleri oluşur. Türkiye'de çoğu sınav 5 şıklıdır (YKS, KPSS vb.)">Şık Sayısı</label>
+                <select id="choiceCount" title="🔤 ŞIK SAYISI: Her soru için kaç cevap seçeneği (baloncuk) olacağını belirler. 4 şık seçerseniz A, B, C, D seçenekleri oluşur. 5 şık seçerseniz A, B, C, D, E seçenekleri oluşur. Türkiye'de çoğu sınav 5 şıklıdır (YKS, KPSS vb.)">
                   <option value="4">4 (A-D)</option>
                   <option value="5" selected>5 (A-E)</option>
                 </select>
               </div>
-              <div><label title="Soruların kaç sütun halinde dizileceğini belirler. Daha fazla sütun = daha kompakt form">Soru Sütunu</label>
-                <select id="columnCount" title="Soruların kaç sütun halinde dizileceğini belirler. Daha fazla sütun = daha kompakt form">
+              <div><label title="📊 SORU SÜTUNU: Soruların formda kaç sütun halinde yan yana dizileceğini belirler. 1 sütun = tüm sorular alt alta (uzun form). 2 sütun = sorular iki sütuna bölünür (dengeli). 3-4 sütun = çok kompakt form ama küçük baloncuklar. Çok soru varsa daha fazla sütun kullanarak formu kısaltabilirsiniz.">Soru Sütunu</label>
+                <select id="columnCount" title="📊 SORU SÜTUNU: Soruların formda kaç sütun halinde yan yana dizileceğini belirler. 1 sütun = tüm sorular alt alta (uzun form). 2 sütun = sorular iki sütuna bölünür (dengeli). 3-4 sütun = çok kompakt form ama küçük baloncuklar. Çok soru varsa daha fazla sütun kullanarak formu kısaltabilirsiniz.">
                   <option value="1">1</option>
                   <option value="2" selected>2</option>
                   <option value="3">3</option>
                   <option value="4">4</option>
                 </select>
               </div>
-              <div><label title="Öğrenci numarası için kaç basamaklı alan oluşturulacağını belirler">Öğr. No Hane</label><input type="number" id="studentDigits" min="4" max="15" value="10" title="Öğrenci numarası için kaç basamaklı alan oluşturulacağını belirler"></div>
-              <div><label title="Form üzerinde cevap anahtarı işaretleme alanının gösterilip gösterilmeyeceğini belirler">Cevap Anahtarı</label>
-                <select id="showAnswerKey" title="Form üzerinde cevap anahtarı işaretleme alanının gösterilip gösterilmeyeceğini belirler">
+              <div><label title="🔢 ÖĞRENCİ NO HANE: Öğrenci numarası için kaç basamaklı kodlama alanı oluşturulacağını belirler. Her basamak için 0-9 arası işaretlenebilir baloncuklar oluşur. Örneğin 10 haneli numara için öğrenci, numarasının her basamağını ayrı ayrı işaretler. Okulunuzdaki öğrenci numarası uzunluğuna göre ayarlayın.">Öğr. No Hane</label><input type="number" id="studentDigits" min="4" max="15" value="10" title="🔢 ÖĞRENCİ NO HANE: Öğrenci numarası için kaç basamaklı kodlama alanı oluşturulacağını belirler. Her basamak için 0-9 arası işaretlenebilir baloncuklar oluşur. Örneğin 10 haneli numara için öğrenci, numarasının her basamağını ayrı ayrı işaretler. Okulunuzdaki öğrenci numarası uzunluğuna göre ayarlayın."></div>
+              <div><label title="🔑 CEVAP ANAHTARI: Form üzerinde öğretmenin doğru cevapları işaretleyebileceği ayrı bir alan oluşturulup oluşturulmayacağını belirler. 'Göster' seçerseniz formun üst kısmında A'dan başlayan şıklar için ayrı bir işaretleme alanı eklenir. Öğretmen buraya doğru cevapları işaretleyerek cevap anahtarını form üzerinden taratabilir.">Cevap Anahtarı</label>
+                <select id="showAnswerKey" title="🔑 CEVAP ANAHTARI: Form üzerinde öğretmenin doğru cevapları işaretleyebileceği ayrı bir alan oluşturulup oluşturulmayacağını belirler. 'Göster' seçerseniz formun üst kısmında A'dan başlayan şıklar için ayrı bir işaretleme alanı eklenir. Öğretmen buraya doğru cevapları işaretleyerek cevap anahtarını form üzerinden taratabilir.">
                   <option value="yes" selected>Göster</option>
                   <option value="no">Gizle</option>
                 </select>
               </div>
-              <div><label title="Cevap anahtarı alanında kaç farklı şık seçeneği olacağını belirler (A'dan başlayarak)">Anahtar Şık</label><input type="number" id="answerKeyChoices" min="4" max="10" value="10" title="Cevap anahtarı alanında kaç farklı şık seçeneği olacağını belirler (A'dan başlayarak)">
+              <div><label title="🅰️ ANAHTAR ŞIK: Cevap anahtarı alanında kaç farklı şık seçeneği bulunacağını belirler. Örneğin 10 seçerseniz A'dan J'ye kadar 10 farklı şık oluşur. Bu, farklı cevap varyasyonları oluşturmak veya karma sınav yapmak için kullanılabilir. Normal kullanımda soru şık sayısıyla aynı tutulabilir.">Anahtar Şık</label><input type="number" id="answerKeyChoices" min="4" max="10" value="10" title="🅰️ ANAHTAR ŞIK: Cevap anahtarı alanında kaç farklı şık seçeneği bulunacağını belirler. Örneğin 10 seçerseniz A'dan J'ye kadar 10 farklı şık oluşur. Bu, farklı cevap varyasyonları oluşturmak veya karma sınav yapmak için kullanılabilir. Normal kullanımda soru şık sayısıyla aynı tutulabilir.">
               </div>
             </div>
 
             <div class="param-grid" style="margin-top:8px;">
-              <div><label title="Formun piksel cinsinden genişliğini belirler. Yazdırma kalitesi için önemli">Form Genişlik (px)</label><input type="number" id="formWidth" min="300" max="1200" value="350"
-                  step="50" title="Formun piksel cinsinden genişliğini belirler. Yazdırma kalitesi için önemli"></div>
-              <div><label title="Formun piksel cinsinden yüksekliğini belirler. Soru sayısına göre ayarlayın">Form Yükseklik (px)</label><input type="number" id="formHeight" min="400" max="2000"
-                  value="600" step="50" title="Formun piksel cinsinden yüksekliğini belirler. Soru sayısına göre ayarlayın"></div>
-              <div><label title="İşaretleme baloncuklarının çapını piksel cinsinden belirler. Büyük = kolay işaretleme, küçük = kompakt form">Baloncuk Boyutu</label><input type="number" id="bubbleSize" min="8" max="24" value="15"
-                  step="1" title="İşaretleme baloncuklarının çapını piksel cinsinden belirler. Büyük = kolay işaretleme, küçük = kompakt form"></div>
-              <div><label title="Soru satırları arasındaki boşluğu piksel cinsinden belirler. Daha az = kompakt, daha fazla = okunabilir">Satır Aralığı</label><input type="number" id="rowGap" min="1" max="20" value="4" step="1" title="Soru satırları arasındaki boşluğu piksel cinsinden belirler. Daha az = kompakt, daha fazla = okunabilir">
+              <div><label title="↔️ FORM GENİŞLİK: Oluşturulacak formun piksel cinsinden genişliğini belirler. A4 kağıda yazdırırken 600-800px arası önerilir. Daha geniş formlar daha büyük baloncuklar ve daha okunaklı yazılar sağlar ama yazdırıldığında kağıda sığması için ölçekleme gerekebilir. PNG indirirken bu değer doğrudan çıktı boyutunu etkiler.">Form Genişlik (px)</label><input type="number" id="formWidth" min="300" max="1200" value="350"
+                  step="50" title="↔️ FORM GENİŞLİK: Oluşturulacak formun piksel cinsinden genişliğini belirler. A4 kağıda yazdırırken 600-800px arası önerilir. Daha geniş formlar daha büyük baloncuklar ve daha okunaklı yazılar sağlar ama yazdırıldığında kağıda sığması için ölçekleme gerekebilir. PNG indirirken bu değer doğrudan çıktı boyutunu etkiler."></div>
+              <div><label title="↕️ FORM YÜKSEKLİK: Oluşturulacak formun piksel cinsinden yüksekliğini belirler. Soru sayısı ve sütun sayısına bağlı olarak ayarlayın. Çok fazla soru tek sütunda ise yüksekliği artırın. Tüm sorular ve öğrenci numarası alanı forma sığmalıdır. Formun altında boşluk kalıyorsa yüksekliği azaltabilirsiniz.">Form Yükseklik (px)</label><input type="number" id="formHeight" min="400" max="2000"
+                  value="600" step="50" title="↕️ FORM YÜKSEKLİK: Oluşturulacak formun piksel cinsinden yüksekliğini belirler. Soru sayısı ve sütun sayısına bağlı olarak ayarlayın. Çok fazla soru tek sütunda ise yüksekliği artırın. Tüm sorular ve öğrenci numarası alanı forma sığmalıdır. Formun altında boşluk kalıyorsa yüksekliği azaltabilirsiniz."></div>
+              <div><label title="⭕ BALONCUK BOYUTU: İşaretleme baloncuklarının (dairelerinin) piksel cinsinden çapını belirler. Büyük baloncuklar (18-24px) öğrencilerin işaretlemesini kolaylaştırır ve okuma doğruluğunu artırır. Küçük baloncuklar (8-12px) daha kompakt form sağlar ama işaretleme zorlaşır ve okuma hataları artabilir. Önerilen: 14-16px.">Baloncuk Boyutu</label><input type="number" id="bubbleSize" min="8" max="24" value="15"
+                  step="1" title="⭕ BALONCUK BOYUTU: İşaretleme baloncuklarının (dairelerinin) piksel cinsinden çapını belirler. Büyük baloncuklar (18-24px) öğrencilerin işaretlemesini kolaylaştırır ve okuma doğruluğunu artırır. Küçük baloncuklar (8-12px) daha kompakt form sağlar ama işaretleme zorlaşır ve okuma hataları artabilir. Önerilen: 14-16px."></div>
+              <div><label title="📏 SATIR ARALIĞI: Soru satırları arasındaki dikey boşluğu piksel cinsinden belirler. Küçük değerler (1-3px) kompakt form oluşturur ama satırlar birbirine yakın olur. Büyük değerler (8-15px) daha okunaklı form sağlar ama daha fazla yer kaplar. Öğrencilerin yanlış satıra işaretleme yapmasını önlemek için en az 4px önerilir.">Satır Aralığı</label><input type="number" id="rowGap" min="1" max="20" value="4" step="1" title="📏 SATIR ARALIĞI: Soru satırları arasındaki dikey boşluğu piksel cinsinden belirler. Küçük değerler (1-3px) kompakt form oluşturur ama satırlar birbirine yakın olur. Büyük değerler (8-15px) daha okunaklı form sağlar ama daha fazla yer kaplar. Öğrencilerin yanlış satıra işaretleme yapmasını önlemek için en az 4px önerilir.">
               </div>
-              <div><label title="PNG çıktı kalitesini belirler. 1x=hızlı/düşük, 4x=yavaş/yüksek kalite. Yazdırma için 2x veya üzeri önerilir">Kalite Çarpanı</label>
-                <select id="qualityScale" title="PNG çıktı kalitesini belirler. 1x=hızlı/düşük, 4x=yavaş/yüksek kalite. Yazdırma için 2x veya üzeri önerilir">
+              <div><label title="🎨 KALİTE ÇARPANI: PNG olarak indirilen formun çözünürlük kalitesini belirler. 1x = form boyutu kadar (hızlı ama düşük kalite). 2x = 2 kat büyük çözünürlük (yazdırma için yeterli). 3x-4x = yüksek kaliteli baskı için (dosya boyutu büyür). Lazer yazıcıda yazdıracaksanız 2x yeterli, profesyonel baskı için 3x-4x kullanın.">Kalite Çarpanı</label>
+                <select id="qualityScale" title="🎨 KALİTE ÇARPANI: PNG olarak indirilen formun çözünürlük kalitesini belirler. 1x = form boyutu kadar (hızlı ama düşük kalite). 2x = 2 kat büyük çözünürlük (yazdırma için yeterli). 3x-4x = yüksek kaliteli baskı için (dosya boyutu büyür). Lazer yazıcıda yazdıracaksanız 2x yeterli, profesyonel baskı için 3x-4x kullanın.">
                   <option value="1">1x (Hızlı)</option>
                   <option value="2" selected>2x (Normal)</option>
                   <option value="3">3x (Yüksek)</option>
                   <option value="4">4x (Çok Yüksek)</option>
                 </select>
               </div>
-              <div><label title="Şık harflerinin (A,B,C...) kaç soruda bir tekrar edileceğini belirler. Uzun formlarda okunabilirliği artırır">Harf Tekrar (soru)</label><input type="number" id="headerRepeat" min="3" max="20" value="5"
-                  step="1" title="Şık harflerinin (A,B,C...) kaç soruda bir tekrar edileceğini belirler. Uzun formlarda okunabilirliği artırır"></div>
+              <div><label title="🔁 HARF TEKRAR: Şık harflerinin (A, B, C, D, E) kaç soruda bir tekrar yazdırılacağını belirler. Uzun formlarda öğrenciler hangi baloncuğun hangi şık olduğunu karıştırabilir. Bu ayar, belirtilen sayıda sorudan sonra harf başlıklarını tekrar gösterir. Örneğin 5 yazarsanız her 5 sorudan sonra 'A B C D E' satırı tekrar eklenir.">Harf Tekrar (soru)</label><input type="number" id="headerRepeat" min="3" max="20" value="5"
+                  step="1" title="🔁 HARF TEKRAR: Şık harflerinin (A, B, C, D, E) kaç soruda bir tekrar yazdırılacağını belirler. Uzun formlarda öğrenciler hangi baloncuğun hangi şık olduğunu karıştırabilir. Bu ayar, belirtilen sayıda sorudan sonra harf başlıklarını tekrar gösterir. Örneğin 5 yazarsanız her 5 sorudan sonra 'A B C D E' satırı tekrar eklenir."></div>
             </div>
 
             <div class="param-grid" style="margin-top:8px;">
-              <div><label title="Sınavı tanımlayan benzersiz kod. QR kodunda ve dosya adında kullanılır">Sınav Kodu</label><input type="text" id="examId" value="SINAV-001" title="Sınavı tanımlayan benzersiz kod. QR kodunda ve dosya adında kullanılır"></div>
-              <div><label title="Form üzerindeki QR kodunda görünecek web adresi">Web Adresi</label><input type="text" id="webUrl" value="optikform.com" title="Form üzerindeki QR kodunda görünecek web adresi"></div>
+              <div><label title="🏷️ SINAV KODU: Bu sınavı tanımlayan benzersiz bir kod veya isim. Örnek: 'MAT-2024-VS1', '10A-FİZİK-1' gibi. Bu kod form üzerindeki QR koduna eklenir ve indirilen dosyanın adında kullanılır. Farklı sınavları ayırt etmek ve sonuçları eşleştirmek için kullanışlıdır.">Sınav Kodu</label><input type="text" id="examId" value="SINAV-001" title="🏷️ SINAV KODU: Bu sınavı tanımlayan benzersiz bir kod veya isim. Örnek: 'MAT-2024-VS1', '10A-FİZİK-1' gibi. Bu kod form üzerindeki QR koduna eklenir ve indirilen dosyanın adında kullanılır. Farklı sınavları ayırt etmek ve sonuçları eşleştirmek için kullanışlıdır."></div>
+              <div><label title="🌐 WEB ADRESİ: Form üzerindeki QR kodunda görünecek web adresi. QR kod tarandığında bu adrese yönlendirme yapılır. Okul web sitenizi veya sonuç sorgulama sayfanızı yazabilirsiniz. Boş bırakırsanız sadece sınav kodu QR'a eklenir.">Web Adresi</label><input type="text" id="webUrl" value="optikform.com" title="🌐 WEB ADRESİ: Form üzerindeki QR kodunda görünecek web adresi. QR kod tarandığında bu adrese yönlendirme yapılır. Okul web sitenizi veya sonuç sorgulama sayfanızı yazabilirsiniz. Boş bırakırsanız sadece sınav kodu QR'a eklenir."></div>
             </div>
 
             <div class="btn-group">
@@ -175,15 +175,15 @@
 
             <div class="param-grid" style="margin-bottom:10px;">
               <div>
-                <label title="Cevap anahtarını nasıl gireceğinizi seçin">Anahtar Kaynağı</label>
-                <select id="answerKeySource" title="Manuel: Cevapları elle girin. Tarayarak: Dolu bir cevap anahtarı formunu tarayın">
+                <label title="📋 ANAHTAR KAYNAĞI: Doğru cevapları sisteme nasıl gireceğinizi seçin. MANUEL GİRİŞ: Aşağıdaki tabloda her soru için doğru şıkkı elle seçersiniz - az sayıda soru için pratik. TARAYARAK YÜKLE: Doğru cevapların işaretlendiği bir formu tarayarak cevap anahtarını otomatik yüklersiniz - çok sayıda soru için hızlı.">Anahtar Kaynağı</label>
+                <select id="answerKeySource" title="📋 ANAHTAR KAYNAĞI: Manuel = elle girin. Tarayarak = dolu form taratın.">
                   <option value="manual" selected>Manuel Giriş</option>
                   <option value="scan">Tarayarak Yükle</option>
                 </select>
               </div>
               <div>
-                <label title="Cevap anahtarındaki toplam soru sayısı">Soru Sayısı</label>
-                <input type="number" id="answerKeyCount" min="1" max="200" value="30" title="Cevap anahtarı için soru sayısı (1-200). Form ayarlarındaki soru sayısıyla eşleşmeli">
+                <label title="📝 SORU SAYISI: Cevap anahtarında kaç soru olduğunu belirler. Bu değer, form tasarlarken belirlediğiniz soru sayısıyla aynı olmalıdır. Farklı olursa eksik veya fazla sorular değerlendirilemez. Anahtar tablosu oluşturulduğunda bu kadar soru için giriş alanı oluşur.">Soru Sayısı</label>
+                <input type="number" id="answerKeyCount" min="1" max="200" value="30" title="📝 SORU SAYISI: Cevap anahtarındaki soru adedi. Form soru sayısıyla eşleşmeli.">
               </div>
             </div>
 
@@ -220,8 +220,8 @@
 
             <div class="param-grid" style="margin-bottom:10px;">
               <div>
-                <label title="Form görüntüsünü nereden alacağınızı seçin">Kaynak</label>
-                <select id="scanSource" title="Kamera: Canlı kamera görüntüsü. Dosya: Önceden çekilmiş fotoğraf yükleyin">
+                <label title="📷 KAYNAK: Form görüntüsünü nereden alacağınızı seçin. KAMERA: Cihazınızın kamerasını kullanarak canlı görüntü üzerinden form tarayın - hızlı ve pratik, özellikle mobil cihazlarda. DOSYADAN YÜKLE: Daha önce çekilmiş veya taranmış bir fotoğrafı yükleyin - yüksek çözünürlüklü tarayıcı görüntüleri için idealdir.">Kaynak</label>
+                <select id="scanSource" title="📷 KAYNAK: Kamera = canlı tarama. Dosya = hazır fotoğraf yükle.">
                   <option value="camera" selected>📷 Kamera</option>
                   <option value="file">📁 Dosyadan Yükle</option>
                 </select>
@@ -229,8 +229,8 @@
             </div>
             <div class="param-grid" id="cameraSelectRow" style="margin-bottom:10px;">
               <div>
-                <label title="Kullanılacak kamerayı seçin. Mobilde arka kamera önerilir">Kamera</label>
-                <select id="cameraSelect" title="Otomatik: Arka kamerayı tercih eder. Birden fazla kamera varsa listeden seçebilirsiniz">
+                <label title="📹 KAMERA: Cihazınızda birden fazla kamera varsa hangisini kullanacağınızı seçin. OTOMATİK: Sistem arka kamerayı (ana kamera) tercih eder - form tarama için en uygun seçenek. Ön kamera (selfie) genellikle daha düşük çözünürlüklüdür ve yakın odaklama zordur. Harici USB kamera bağlıysanız listede görünecektir.">Kamera</label>
+                <select id="cameraSelect" title="📹 KAMERA: Otomatik = arka kamera tercih edilir. Listeden başka kamera seçebilirsiniz.">
                   <option value="">Otomatik (arka kamera)</option>
                 </select>
               </div>
@@ -272,10 +272,10 @@
             </div>
 
             <div class="settings-row">
-              <label title="Baloncuğun 'dolu' sayılması için gereken minimum doluluk oranı. Düşük değer = hassas, yüksek = katı">Eşik: <input type="number" id="fillThreshold" value="0.20" min="0.1" max="0.9" step="0.02" title="Baloncuğun 'dolu' sayılması için gereken minimum doluluk oranı (0.1-0.9). Düşük = hassas okuma, yüksek = sadece tam dolu baloncuklar"></label>
-              <label title="Yanlış cevap başına düşülecek puan cezası. 0.25 = 4 yanlış 1 doğruyu götürür">Ceza: <input type="number" id="penalty" value="0.25" min="0" max="1" step="0.05" title="Yanlış cevap başına düşülecek puan cezası. 0 = ceza yok, 0.25 = 4 yanlış 1 doğruyu götürür, 0.33 = 3 yanlış 1 doğruyu götürür"></label>
-              <label style="gap:4px;" title="Gölgeli veya düşük kontrastlı formlarda okumayı iyileştirir"><input type="checkbox" id="shadowMode" title="Gölgeli veya düşük kontrastlı formlarda okumayı iyileştirir"> Gölge modu</label>
-              <button class="btn secondary" id="advancedSettingsBtn" style="padding:4px 8px;font-size:10px;margin-left:auto;" title="Görüntü işleme, marker tespiti ve baloncuk analizi için detaylı ayarları göster">⚙️ Gelişmiş</button>
+              <label title="📊 DOLULUK EŞİĞİ: Bir baloncuğun 'işaretlenmiş' sayılması için içinin ne kadar dolu olması gerektiğini belirler. 0.20 (varsayılan) = baloncuğun %20'si kararmışsa işaretli kabul edilir. Öğrenciler hafif işaretliyorsa bu değeri düşürün (0.15). Çok koyu kalem kullanılıyorsa artırın (0.25-0.30). Çok düşük değer yanlış pozitif, çok yüksek değer kaçırılan işaretlere neden olur.">Eşik: <input type="number" id="fillThreshold" value="0.20" min="0.1" max="0.9" step="0.02" title="📊 DOLULUK EŞİĞİ: Bir baloncuğun 'işaretlenmiş' sayılması için içinin ne kadar dolu olması gerektiğini belirler. 0.20 (varsayılan) = baloncuğun %20'si kararmışsa işaretli kabul edilir. Öğrenciler hafif işaretliyorsa bu değeri düşürün (0.15). Çok koyu kalem kullanılıyorsa artırın (0.25-0.30). Çok düşük değer yanlış pozitif, çok yüksek değer kaçırılan işaretlere neden olur."></label>
+              <label title="⚖️ YANLIŞ CEZASI: Her yanlış cevap için puandan düşülecek ceza miktarı. Net puan hesaplamasında kullanılır. 0.25 = 4 yanlış 1 doğruyu götürür (klasik ÖSYM formülü). 0.33 = 3 yanlış 1 doğruyu götürür. 0 = ceza yok, sadece doğru sayısı hesaplanır. Formül: Net = Doğru - (Yanlış × Ceza)">Ceza: <input type="number" id="penalty" value="0.25" min="0" max="1" step="0.05" title="⚖️ YANLIŞ CEZASI: Her yanlış cevap için puandan düşülecek ceza miktarı. Net puan hesaplamasında kullanılır. 0.25 = 4 yanlış 1 doğruyu götürür (klasik ÖSYM formülü). 0.33 = 3 yanlış 1 doğruyu götürür. 0 = ceza yok, sadece doğru sayısı hesaplanır. Formül: Net = Doğru - (Yanlış × Ceza)"></label>
+              <label style="gap:4px;" title="🌓 GÖLGE MODU: Düzgün olmayan aydınlatma, gölgeler veya düşük kontrastlı kağıt/baskı durumlarında okuma doğruluğunu artırmak için özel görüntü işleme uygular. Formun bir tarafı diğerinden daha karanlıksa veya gölge düşüyorsa bu modu etkinleştirin. Normal koşullarda kapalı tutun."><input type="checkbox" id="shadowMode" title="🌓 GÖLGE MODU: Düzgün olmayan aydınlatma, gölgeler veya düşük kontrastlı kağıt/baskı durumlarında okuma doğruluğunu artırmak için özel görüntü işleme uygular. Formun bir tarafı diğerinden daha karanlıksa veya gölge düşüyorsa bu modu etkinleştirin. Normal koşullarda kapalı tutun."> Gölge modu</label>
+              <button class="btn secondary" id="advancedSettingsBtn" style="padding:4px 8px;font-size:10px;margin-left:auto;" title="⚙️ GELİŞMİŞ AYARLAR: Görüntü işleme parametreleri, marker tespit yöntemleri, baloncuk analiz hassasiyeti, performans ayarları ve hazır ayar setlerine erişim sağlar. Normal kullanımda bu ayarlara dokunmanıza gerek yoktur, ancak okuma sorunları yaşıyorsanız burada ince ayar yapabilirsiniz.">⚙️ Gelişmiş</button>
             </div>
 
             <!-- Gelişmiş Ayarlar Paneli -->
@@ -290,20 +290,75 @@
                 <div class="settings-section-title">🖼️ Görüntü İşleme</div>
                 <div class="settings-grid">
                   <div class="setting-item">
-                    <label title="CLAHE (Contrast Limited Adaptive Histogram Equalization): Düşük kontrastlı görüntülerde detayları artırır">CLAHE</label>
-                    <input type="checkbox" id="claheEnabled" title="CLAHE kontrast iyileştirmesini etkinleştirir. Düşük ışıkta veya soluk baskılarda faydalı">
+                    <label title="🔆 CLAHE (Contrast Limited Adaptive Histogram Equalization)
+
+📌 NE YAPAR: Görüntünün farklı bölgelerindeki kontrastı ayrı ayrı analiz edip iyileştiren gelişmiş bir görüntü işleme algoritmasıdır. Normal histogram eşitlemenin aksine, her bölgeyi bağımsız olarak işler.
+
+🎯 NE ZAMAN KULLANILIR:
+• Karanlık odada veya akşam saatlerinde çekim yapıyorsanız
+• Formun bazı bölgeleri çok açık, bazıları çok koyu görünüyorsa
+• Soluk/silik baskılı formlarda işaretler zor seçiliyorsa
+• Eski fotokopi makinesiyle çoğaltılmış formlarda
+
+⚠️ DİKKAT: İşlem süresini yaklaşık %20 artırır. Çok parlak/iyi aydınlatılmış ortamlarda gereksizdir ve bazen görüntüde 'kumlanma' (gürültü) oluşturabilir.">CLAHE</label>
+                    <input type="checkbox" id="claheEnabled" title="🔆 CLAHE: Düşük ışıkta veya düzensiz aydınlatmada kontrastı iyileştirir. Karanlık ortamlarda veya soluk baskılarda işaretleri daha görünür hale getirir.">
                   </div>
                   <div class="setting-item">
-                    <label title="CLAHE algoritmasının kontrast sınırı. Yüksek değer = daha agresif kontrast artışı, gürültü artabilir">CLAHE Clip</label>
-                    <input type="number" id="claheClipLimit" value="2.0" min="1" max="5" step="0.5" title="CLAHE kontrast sınırı (1-5). 2.0 dengeli, 3+ agresif ama gürültülü olabilir">
+                    <label title="📈 CLAHE CLIP LIMIT (Kontrast Sınırı)
+
+📌 NE YAPAR: CLAHE algoritmasının kontrast artırma agresifliğini kontrol eder. Piksel değerlerinin ne kadar 'gerileceğini' sınırlar.
+
+🔢 DEĞER REHBERİ:
+• 1.0-1.5: Çok hafif düzeltme, neredeyse fark edilmez
+• 2.0: Dengeli ve güvenli varsayılan değer
+• 2.5-3.0: Orta düzey düzeltme, karanlık görüntüler için
+• 3.5-4.0: Agresif düzeltme, çok karanlık ortamlar için
+• 4.5-5.0: Maksimum düzeltme, aşırı durumlarda
+
+⚠️ DİKKAT: 3.0 üzeri değerlerde görüntüde gürültü (küçük noktacıklar/kumlanma) oluşabilir. Bu gürültü bazen boş baloncukların 'dolu' olarak algılanmasına neden olabilir.
+
+💡 ÖNERİ: Önce 2.0 ile deneyin, yetersizse 0.5'er artırarak en uygun değeri bulun.">CLAHE Clip</label>
+                    <input type="number" id="claheClipLimit" value="2.0" min="1" max="5" step="0.5" title="📈 CLAHE CLIP: Kontrast artırma gücü. 2.0 = güvenli varsayılan. 3.0+ = çok karanlık için ama gürültü riski.">
                   </div>
                   <div class="setting-item">
-                    <label title="Gaussian bulanıklaştırma miktarı. Gürültüyü azaltır ama keskinliği düşürür">Blur Sigma</label>
-                    <input type="number" id="blurSigma" value="0" min="0" max="3" step="0.5" title="Bulanıklaştırma (0-3). 0 = kapalı, 1+ = gürültü azaltma. Çok yüksek değer detay kaybına yol açar">
+                    <label title="🌫️ BLUR SIGMA (Gaussian Bulanıklaştırma)
+
+📌 NE YAPAR: Görüntüye kontrollü bir bulanıklık uygulayarak gürültüyü (rastgele noktacıkları) azaltır. Sigma değeri bulanıklığın yoğunluğunu belirler.
+
+🔢 DEĞER REHBERİ:
+• 0: Kapalı - bulanıklaştırma yok (çoğu durum için önerilen)
+• 0.5: Çok hafif - minimal gürültü azaltma
+• 1.0: Hafif - düşük kaliteli kamera/baskı için
+• 1.5-2.0: Orta - grenli görüntüler için
+• 2.5-3.0: Yoğun - aşırı gürültülü görüntüler için
+
+🎯 NE ZAMAN KULLANILIR:
+• Eski/düşük çözünürlüklü kamerayla çekim yapıyorsanız
+• Görüntüde çok fazla küçük nokta/gürültü varsa
+• Düşük kaliteli kağıt veya mürekkep kullanılmışsa
+
+⚠️ DİKKAT: Fazla bulanıklaştırma baloncuk kenarlarını belirsizleştirir ve ince işaretlerin kaybolmasına neden olabilir. Normalde 0'da bırakın.">Blur Sigma</label>
+                    <input type="number" id="blurSigma" value="0" min="0" max="3" step="0.5" title="🌫️ BLUR: 0 = kapalı (önerilen). Grenli görüntülerde 0.5-1.0 deneyin.">
                   </div>
                   <div class="setting-item">
-                    <label title="Adaptif eşikleme için blok boyutu. Büyük değer = daha pürüzsüz ama yerel detay kaybı">Block Size</label>
-                    <select id="blockSize" title="Adaptif eşikleme blok boyutu. 11 dengeli, 15+ düzgün yüzeyler, 9 detaylı ama gürültülü">
+                    <label title="🔲 BLOCK SIZE (Adaptif Eşikleme Blok Boyutu)
+
+📌 NE YAPAR: Görüntüyü siyah-beyaza dönüştürürken (eşikleme) kullanılan analiz penceresinin piksel boyutudur. Her piksel için çevresindeki bu boyuttaki alan analiz edilir.
+
+🔢 DEĞER REHBERİ:
+• 9: En küçük blok - çok ince detayları yakalar ama gürültüye hassas
+• 11: Dengeli varsayılan - çoğu form için ideal
+• 13: Biraz daha pürüzsüz sonuç
+• 15: Büyük blok - düzgün yüzeyler için, küçük işaretleri kaçırabilir
+• 17: En büyük - çok düzensiz aydınlatmada
+
+🎯 NE ZAMAN KULLANILIR:
+• Görüntüde çok fazla gürültü varsa → büyük blok (13-17)
+• İşaretler çok ince/soluksa → küçük blok (9)
+• Normal baskı kalitesinde → 11 (varsayılan)
+
+⚠️ TEKNİK NOT: Değer her zaman tek sayı olmalıdır. Büyük bloklar daha yavaş işlenir.">Block Size</label>
+                    <select id="blockSize" title="🔲 BLOCK SIZE: 11 = standart. Gürültülü görüntülerde 15. Soluk işaretlerde 9.">
                       <option value="9">9</option>
                       <option value="11" selected>11</option>
                       <option value="13">13</option>
@@ -312,20 +367,88 @@
                     </select>
                   </div>
                   <div class="setting-item">
-                    <label title="Adaptif eşikleme sabiti. Yüksek değer = daha koyu eşik, açık renkli işaretler için artırın">C Değeri</label>
-                    <input type="number" id="cValue" value="2" min="1" max="10" step="1" title="Eşikleme sabiti (1-10). 2 standart, açık kalem için 4+, koyu kalem için 1-2">
+                    <label title="➕ C DEĞERİ (Eşikleme Sabiti)
+
+📌 NE YAPAR: Adaptif eşiklemede hesaplanan ortalama değerden çıkarılan sabit sayıdır. Bu değer, neyin 'siyah' (işaretli) neyin 'beyaz' (boş) sayılacağını doğrudan etkiler.
+
+🔢 DEĞER REHBERİ:
+• 1: Çok düşük - sadece en koyu işaretleri algılar
+• 2: Standart varsayılan - normal kalem koyuluğu için
+• 3-4: Orta - biraz açık renkli kalemleri de algılar
+• 5-6: Yüksek - açık mavi/yeşil kalem veya silik işaretler için
+• 7-10: Çok yüksek - çok soluk işaretler için ama arka plan gürültüsü artar
+
+🎯 SENARYO ÖRNEKLERİ:
+• Öğrenciler 2B kurşun kalem kullanıyorsa → 2
+• Öğrenciler HB veya daha açık kalem kullanıyorsa → 3-4
+• Tükenmez kalem veya renkli kalem kullanılmışsa → 4-6
+• Çok silik/yarım işaretlenmiş formlar → 5-7
+
+⚠️ DİKKAT: Çok yüksek değerler kağıt dokusunu veya hafif kirleri de 'işaret' olarak algılayabilir.">C Değeri</label>
+                    <input type="number" id="cValue" value="2" min="1" max="10" step="1" title="➕ C DEĞERİ: 2 = koyu kalem. 4-6 = açık kalem. 7+ = çok silik işaretler.">
                   </div>
                   <div class="setting-item">
-                    <label title="Görüntüdeki gölgeleri tespit edip kaldırmaya çalışır. Eğri kağıt veya yan aydınlatmada faydalı">Gölge Kaldır</label>
-                    <input type="checkbox" id="shadowRemoval" title="Gölge kaldırma algoritmasını etkinleştirir. Eğri kağıt veya yan ışıkta işe yarar">
+                    <label title="🌑 GÖLGE KALDIR (Shadow Removal)
+
+📌 NE YAPAR: Görüntüdeki düzensiz aydınlatmayı (bir köşenin diğerinden karanlık olması) tespit edip düzeltir. Morfolojik işlemler kullanarak arka plan aydınlatmasını normalize eder.
+
+🎯 NE ZAMAN KULLANILIR:
+• Pencere kenarında çekim yapıyorsanız (bir taraf çok aydınlık)
+• Masa lambası altında çekim yapıyorsanız (merkez aydınlık, kenarlar karanlık)
+• Kağıt düz değilse (kıvrılmış kenarlar gölge oluşturur)
+• Elinizin gölgesi forma düşüyorsa
+• Tavan lambası doğrudan üstten değilse
+
+📋 PRATİK TEST: Çektiğiniz fotoğrafta formun bir köşesi diğerinden belirgin şekilde daha koyu görünüyorsa bu özelliği açın.
+
+⚠️ DİKKAT: İşlem süresini yaklaşık %15 artırır. Düzgün aydınlatılmış ortamlarda gereksizdir.
+
+💡 ÖNERİ: Gölge sorunu yaşıyorsanız önce çekim ortamını iyileştirmeyi deneyin (ışık kaynağını değiştirmek genellikle daha iyi sonuç verir).">Gölge Kaldır</label>
+                    <input type="checkbox" id="shadowRemoval" title="🌑 GÖLGE KALDIR: Formun bir tarafı karanlıksa düzeltir. Pencere kenarı veya masa lambası altında çekimde açın.">
                   </div>
                   <div class="setting-item">
-                    <label title="Görüntünün renk dengesini otomatik ayarlar. Sararmış kağıt veya renkli ışıkta faydalı">Beyaz Dengesi</label>
-                    <input type="checkbox" id="whiteBalance" title="Otomatik beyaz dengesi. Sararmış kağıt, floresan veya LED aydınlatmada renk düzeltmesi yapar">
+                    <label title="⚪ BEYAZ DENGESİ (White Balance)
+
+📌 NE YAPAR: Görüntüdeki renk sapmasını otomatik düzeltir. Beyaz olması gereken alanları analiz ederek tüm görüntünün renk dengesini ayarlar.
+
+🎯 NE ZAMAN KULLANILIR:
+• Sararmış veya eskimiş kağıt kullanılmışsa
+• Floresan lamba altında çekim (yeşilimsi ton verir)
+• Sıcak LED ışık altında çekim (sarımsı ton verir)
+• Soğuk LED ışık altında çekim (mavimsi ton verir)
+• Gün batımı ışığında çekim (turuncu ton verir)
+• Renkli duvar veya perde yansıması varsa
+
+📋 NEDEN ÖNEMLİ: Renk sapması olan görüntülerde eşikleme algoritması yanlış çalışabilir. Örneğin sararmış kağıt, beyaz yerine 'krem rengi' olarak algılanır ve baloncukların boş/dolu ayrımı zorlaşır.
+
+⚠️ DİKKAT: Renkli kağıt veya renkli mürekkep kullanılmış formlarda beklenmeyen sonuçlar verebilir. Normal beyaz kağıt ve siyah mürekkep için tasarlanmıştır.">Beyaz Dengesi</label>
+                    <input type="checkbox" id="whiteBalance" title="⚪ BEYAZ DENGESİ: Sararmış kağıt veya renkli ışıkta renk sapmasını düzeltir.">
                   </div>
                   <div class="setting-item">
-                    <label title="Görüntü kalitesine göre parametreleri otomatik ayarlar. Çoğu durumda açık bırakın">Otomatik Ayar</label>
-                    <input type="checkbox" id="autoTuneEnabled" checked title="Görüntü analiz edilerek en uygun ayarlar otomatik seçilir. Kapatırsanız manuel değerler kullanılır">
+                    <label title="🤖 OTOMATİK AYAR (Auto-Tune)
+
+📌 NE YAPAR: Her gelen görüntüyü analiz ederek (parlaklık dağılımı, kontrast seviyesi, gürültü miktarı) yukarıdaki görüntü işleme parametrelerini otomatik olarak en uygun değerlere ayarlar.
+
+✅ AÇIK OLDUĞUNDA:
+• Her görüntü için parametreler dinamik olarak hesaplanır
+• Karanlık görüntüde otomatik CLAHE aktif olur
+• Gürültülü görüntüde blur uygulanır
+• Değişen ışık koşullarına adapte olur
+
+❌ KAPALI OLDUĞUNDA:
+• Manuel girdiğiniz değerler sabit olarak kullanılır
+• Her görüntü aynı parametrelerle işlenir
+• Daha hızlı işlem (analiz adımı atlanır)
+• Tutarlı/tekrarlanabilir sonuçlar
+
+🎯 NE ZAMAN KAPATILIR:
+• Sabit bir kurulum kullandığınızda (aynı kamera, aynı ışık, aynı mesafe)
+• Toplu taramada tutarlı sonuç istediğinizde
+• Manuel ayarları test ederken
+• Belirli bir ayar setinin etkisini görmek istediğinizde
+
+💡 ÖNERİ: Çoğu kullanıcı için AÇIK tutmak en iyisidir. Sadece ileri düzey kullanıcılar veya özel durumlar için kapatın.">Otomatik Ayar</label>
+                    <input type="checkbox" id="autoTuneEnabled" checked title="🤖 OTOMATİK AYAR: Görüntüye göre parametreleri otomatik optimize eder. Manuel kontrol için kapatın.">
                   </div>
                 </div>
               </div>
@@ -335,24 +458,114 @@
                 <div class="settings-section-title">📍 Marker Tespiti</div>
                 <div class="settings-grid">
                   <div class="setting-item">
-                    <label title="Form köşelerini bulmak için kullanılacak yöntem. Otomatik en iyisini seçer">Marker Metodu</label>
-                    <select id="markerMethod" title="Otomatik: En uygun yöntemi seçer. ArUco: Kare kodlu markerlar. Cross: Artı işareti markerlar">
+                    <label title="🎯 MARKER METODU (Köşe Tespit Yöntemi)
+
+📌 NE YAPAR: Formun dört köşesindeki referans işaretlerini (markerları) bulmak için kullanılacak algoritmayı seçer. Markerlar, eğik çekilen formların düzeltilmesi (perspektif düzeltme) için kritik öneme sahiptir.
+
+🔧 SEÇENEKLER:
+
+OTOMATİK (Önerilen):
+• Önce ArUco marker aramayı dener
+• Bulamazsa Cross marker aramaya geçer
+• Çoğu durum için en iyi seçenek
+
+ARUCO:
+• Kare şeklinde, içinde siyah-beyaz kodlama olan özel markerlar
+• Çok güvenilir ve hassas konum tespiti
+• Kısmen örtülmüş veya hasarlı olsa bile tanınabilir
+• Dezavantaj: Bu uygulama ile oluşturulmuş formlar gerektirir
+
+CROSS (Artı İşareti):
+• Basit artı (+) şeklinde siyah işaretler
+• Çoğu standart optik formda bulunan klasik marker tipi
+• Elle çizilmiş veya farklı kaynaklardan gelen formlarla uyumlu
+• Dezavantaj: ArUco'ya göre daha az güvenilir
+
+💡 ÖNERİ: 'Otomatik' seçeneğini kullanın. Sadece belirli bir marker tipi kullandığınızdan eminseniz manuel seçim yapın.">Marker Metodu</label>
+                    <select id="markerMethod" title="🎯 MARKER METODU: Otomatik = en iyisini seçer (önerilen). ArUco = kare kodlu. Cross = artı işareti.">
                       <option value="auto" selected>Otomatik</option>
                       <option value="aruco">ArUco</option>
                       <option value="cross">Cross</option>
                     </select>
                   </div>
                   <div class="setting-item">
-                    <label title="Marker tespiti için minimum kalite skoru. Düşük = daha toleranslı ama hatalı tespit riski">Kalite Eşiği</label>
-                    <input type="number" id="markerQualityThreshold" value="0.45" min="0.2" max="0.8" step="0.05" title="Marker kalite eşiği (0.2-0.8). 0.45 dengeli, 0.3 toleranslı, 0.6+ katı">
+                    <label title="⭐ KALİTE EŞİĞİ (Marker Quality Threshold)
+
+📌 NE YAPAR: Tespit edilen bir marker'ın 'geçerli' sayılması için gereken minimum kalite puanını belirler. Her marker 0 ile 1 arasında bir kalite puanı alır.
+
+🔢 DEĞER REHBERİ:
+• 0.20-0.30: Çok toleranslı - hasarlı/silik markerları kabul eder
+• 0.35-0.45: Dengeli varsayılan - çoğu form için uygun
+• 0.50-0.60: Katı - sadece net markerları kabul eder
+• 0.65-0.80: Çok katı - mükemmel baskı kalitesi gerektirir
+
+🎯 DÜŞÜK DEĞER (0.25-0.35) NE ZAMAN:
+• Fotokopi makinesiyle çoğaltılmış formlarda
+• Marker köşeleri yıpranmış/silinmiş formlarda
+• Düşük kaliteli baskı veya mürekkep azalmış yazıcıda
+• 'Form okunamadı' hatası çok sık alınıyorsa
+
+🎯 YÜKSEK DEĞER (0.55-0.70) NE ZAMAN:
+• Yüksek kaliteli lazer baskı kullanıyorsanız
+• Markerlar çok net ve temizse
+• Yanlış marker tespiti (formun yanlış hizalanması) sorunu yaşıyorsanız
+
+⚠️ DİKKAT: Çok düşük değerler rastgele şekillerin marker olarak algılanmasına neden olabilir.">Kalite Eşiği</label>
+                    <input type="number" id="markerQualityThreshold" value="0.45" min="0.2" max="0.8" step="0.05" title="⭐ KALİTE EŞİĞİ: 0.45 = dengeli. 0.30 = hasarlı formlar. 0.60 = temiz baskılar.">
                   </div>
                   <div class="setting-item">
-                    <label title="İzin verilen maksimum eğiklik oranı. Yüksek değer = daha eğik formları kabul eder">Skew Limit</label>
-                    <input type="number" id="warpSkewLimit" value="0.15" min="0.05" max="0.30" step="0.01" title="Maksimum eğiklik limiti (0.05-0.30). 0.15 standart, 0.25+ çok eğik formlar için">
+                    <label title="📐 SKEW LİMİT (Eğiklik Toleransı)
+
+📌 NE YAPAR: Formun kameraya göre ne kadar eğik tutulabileceğinin maksimum sınırını belirler. Form tam düz tutulmadığında markerlar arasındaki oranlar değişir - bu değişim 'skew' olarak ölçülür.
+
+🔢 DEĞER REHBERİ:
+• 0.05: Çok katı - neredeyse mükemmel düz tutulmalı
+• 0.10: Katı - hafif eğiklik kabul
+• 0.15: Standart varsayılan - makul eğiklik toleransı
+• 0.20: Toleranslı - belirgin eğiklikler kabul
+• 0.25-0.30: Çok toleranslı - aşırı eğik formlar için
+
+🎯 NE ZAMAN ARTIRILIR (0.20-0.30):
+• Elle tutarak çekim yapılıyorsa (tripod yok)
+• Mobil cihazla ayakta çekim yapılıyorsa
+• Formlar masaya tam düz konmuyorsa
+• 'Form çok eğik' hatası sık alınıyorsa
+
+🎯 NE ZAMAN AZALTILIR (0.08-0.12):
+• Tripod veya sabit stand kullanıyorsanız
+• Formlar düz bir yüzeye sabitleniyorsa
+• Maksimum okuma doğruluğu gerekiyorsa
+
+⚠️ DİKKAT: Çok yüksek değerler perspektif düzeltmesinin kalitesini düşürür ve baloncuk tespitini zorlaştırır.
+
+💡 ÖNERİ: Mümkünse formu düz tutmaya çalışın ve değeri 0.15'te bırakın.">Skew Limit</label>
+                    <input type="number" id="warpSkewLimit" value="0.15" min="0.05" max="0.30" step="0.01" title="📐 SKEW LİMİT: 0.15 = standart. Elle çekimde 0.20-0.25. Sabit kurulum için 0.10.">
                   </div>
                   <div class="setting-item">
-                    <label title="Formun görüntüdeki minimum alan yüzdesi. Çok uzaktan çekimleri reddetmek için">Min Alan %</label>
-                    <input type="number" id="warpAreaMinRatio" value="10" min="5" max="30" step="1" title="Minimum form alanı yüzdesi (5-30). 10% standart, küçük formlar için 5%, büyük formlar için 20%">
+                    <label title="📏 MİN ALAN % (Minimum Form Alanı Yüzdesi)
+
+📌 NE YAPAR: Tespit edilen formun, toplam görüntü alanına göre minimum kaplaması gereken yüzdeyi belirler. Çok uzaktan çekilmiş (formun çok küçük göründüğü) fotoğrafları reddetmek için kullanılır.
+
+🔢 DEĞER REHBERİ:
+• 5%: Çok toleranslı - uzaktan çekimler kabul
+• 10%: Standart varsayılan - dengeli
+• 15%: Orta - formun görüntünün önemli kısmını kaplaması gerekir
+• 20-30%: Katı - form görüntünün büyük kısmını kaplamalı
+
+🎯 NEDEN ÖNEMLİ:
+Form görüntüde çok küçük kaldığında:
+• Baloncuklar çok az piksel kaplar → okuma zorlaşır
+• Küçük hatalar büyük sorunlara yol açar
+• Gürültü/bulanıklık etkisi artar
+• Genel doğruluk düşer
+
+📋 PRATİK REHBERLİK:
+• Form, kamera görüntüsünün en az 1/4'ünü kaplamalıdır (ideal)
+• Mobil cihazda formu 15-20 cm mesafeden çekin
+• Webcam'de formu ekranın çoğunu kaplayacak şekilde konumlandırın
+
+⚠️ DİKKAT: %5'in altına düşürmeyin - çok küçük form görüntüleri güvenilir şekilde okunamaz.">Min Alan %</label>
+                    <input type="number" id="warpAreaMinRatio" value="10" min="5" max="30" step="1" title="📏 MİN ALAN: Form, görüntünün en az bu kadarını kaplamalı. 10% = standart.">
                   </div>
                 </div>
               </div>
@@ -362,20 +575,109 @@
                 <div class="settings-section-title">⭕ Baloncuk Analizi</div>
                 <div class="settings-grid">
                   <div class="setting-item">
-                    <label title="Baloncuk arama alanının ölçek faktörü. Küçük kaymalar için tolerans sağlar">ROI Scale</label>
-                    <input type="number" id="roiScale" value="1.04" min="1.00" max="1.20" step="0.02" title="ROI büyütme faktörü (1.00-1.20). 1.04 standart, hizalama sorunlarında 1.08+ deneyin">
+                    <label title="🔍 ROI SCALE (İlgi Alanı Büyütme Faktörü)
+
+📌 NE YAPAR: Her baloncuk için arama yapılan alanın (Region of Interest) ne kadar büyütüleceğini belirler. Baloncuğun teorik konumunun etrafında daha geniş bir alanda arama yapar.
+
+🔢 DEĞER REHBERİ:
+• 1.00: Tam hesaplanan boyutta arar (tolerans yok)
+• 1.02: Minimal tolerans (%2 fazla alan)
+• 1.04: Standart varsayılan (%4 tolerans)
+• 1.06-1.08: Orta tolerans - hafif hizalama sorunları için
+• 1.10-1.15: Yüksek tolerans - belirgin kaymalar için
+• 1.16-1.20: Çok yüksek - aşırı durumlar için
+
+🎯 NE ZAMAN ARTIRILIR (1.06-1.12):
+• Bazı baloncuklar 'bulunamadı' olarak görünüyorsa
+• Form baskısında küçük kaymalar varsa
+• Perspektif düzeltmesi sonrası hizalama tam değilse
+• Kağıt büzülmüş veya ıslanıp kurumuşsa
+
+⚠️ DİKKAT: 1.10'un üzeri değerlerde komşu baloncukların alanları örtüşebilir ve yanlış okumaya neden olabilir.
+
+💡 ÖNERİ: Normal koşullarda 1.04'te bırakın. Sorun yaşarsanız 0.02'şer artırın.">ROI Scale</label>
+                    <input type="number" id="roiScale" value="1.04" min="1.00" max="1.20" step="0.02" title="🔍 ROI SCALE: 1.04 = standart. Kaçan baloncuklarda 1.08. Çok yakın baloncuklarda 1.02.">
                   </div>
                   <div class="setting-item">
-                    <label title="Baloncuk içi analiz için merkez maskeleme oranı. Kenar efektlerini yok sayar">Mask Ratio</label>
-                    <input type="number" id="maskRatio" value="0.32" min="0.20" max="0.50" step="0.02" title="Merkez maske oranı (0.20-0.50). 0.32 standart, küçük baloncuklarda 0.25, büyüklerde 0.40">
+                    <label title="⭕ MASK RATIO (Merkez Maske Oranı)
+
+📌 NE YAPAR: Baloncuğun doluluk oranını hesaplarken, baloncuk alanının ne kadarının analiz edileceğini belirler. Baloncuğun kenar çizgileri (çember çizgisi) hesaba katılmaz, sadece iç kısım değerlendirilir.
+
+🔢 DEĞER REHBERİ:
+• 0.20-0.25: Küçük merkez alanı - sadece tam ortayı analiz eder
+• 0.28-0.35: Standart aralık - dengelidir
+• 0.36-0.42: Geniş merkez - daha fazla alanı değerlendirir
+• 0.43-0.50: Çok geniş - neredeyse tüm baloncuk
+
+🎯 KÜÇÜK DEĞER (0.22-0.28) NE ZAMAN:
+• Baloncuklar çok küçükse (8-10px)
+• Baloncuk çerçevesi çok kalınsa
+• Öğrenciler baloncuğun sadece ortasını işaretliyorsa
+
+🎯 BÜYÜK DEĞER (0.38-0.45) NE ZAMAN:
+• Baloncuklar büyükse (18-24px)
+• Öğrenciler baloncuğu tamamen dolduruyorsa
+• Baloncuk çerçevesi inceyse veya yoksa
+
+📋 TEKNİK AÇIKLAMA:
+Baloncuk çerçevesinin kendisi de siyah olduğundan, eğer çerçeve dahil edilirse boş baloncuklar bile 'kısmen dolu' görünür. Bu yüzden sadece merkez analiz edilir.">Mask Ratio</label>
+                    <input type="number" id="maskRatio" value="0.32" min="0.20" max="0.50" step="0.02" title="⭕ MASK RATIO: 0.32 = standart. Küçük baloncuklarda 0.25. Büyük baloncuklarda 0.40.">
                   </div>
                   <div class="setting-item">
-                    <label title="Boş baloncuk için maksimum doluluk oranı. Bu değerin altındaki baloncuklar 'boş' sayılır">Blank Guard</label>
-                    <input type="number" id="blankGuard" value="0.18" min="0.08" max="0.30" step="0.02" title="Boş baloncuk eşiği (0.08-0.30). Bu oranın altındaki baloncuklar boş kabul edilir">
+                    <label title="⬜ BLANK GUARD (Boş Baloncuk Koruması)
+
+📌 NE YAPAR: Bir baloncuğun kesinlikle 'BOŞ' sayılması için maksimum doluluk oranını belirler. Bu eşiğin altındaki doluluklar işaretlenmemiş kabul edilir.
+
+🔢 DEĞER REHBERİ:
+• 0.08-0.12: Çok düşük - neredeyse hiç mürekkep olmamalı
+• 0.14-0.18: Standart aralık
+• 0.20-0.24: Orta - hafif kirlilik/gürültüye tolerans
+• 0.25-0.30: Yüksek - kirli kağıt/görüntüde tolerans
+
+🎯 NEDEN GEREKLİ:
+• Kağıtta küçük kirler veya noktalar olabilir
+• Kamera gürültüsü boş baloncuklarda bile sinyal üretir
+• Silgili baloncularda iz kalabilir
+• Düşük kaliteli baskıda baloncuk içi lekeli olabilir
+
+🎯 NE ZAMAN ARTIRILIR (0.20-0.28):
+• Kirli veya eski kağıt kullanılıyorsa
+• Kamera görüntüsünde çok gürültü varsa
+• Öğrenciler sık silgi kullanıyorsa
+• Yanlış pozitif (boş olan işaretli görünüyor) sorunu varsa
+
+🎯 NE ZAMAN AZALTILIR (0.10-0.14):
+• Çok temiz/yeni kağıt ve kaliteli baskı
+• Yüksek çözünürlüklü kamera
+• Hafif işaretlemelerin de okunması gerekiyorsa
+
+⚠️ DİKKAT: Çok düşük değerler hafif kirleri 'işaret' olarak algılayabilir.">Blank Guard</label>
+                    <input type="number" id="blankGuard" value="0.18" min="0.08" max="0.30" step="0.02" title="⬜ BLANK GUARD: Bu oranın altı = boş. 0.18 = standart. Kirli kağıtta 0.22-0.25.">
                   </div>
                   <div class="setting-item">
-                    <label title="Baloncuk pozisyonlarını dinamik olarak arayarak en iyi eşleşmeyi bulur">Offset Arama</label>
-                    <input type="checkbox" id="offsetSearchEnabled" checked title="Baloncuk pozisyon araması. Küçük hizalama hatalarını telafi eder, kapatmak hızlandırır">
+                    <label title="🔎 OFFSET ARAMA (Dinamik Pozisyon Arama)
+
+📌 NE YAPAR: Her baloncuğun beklenen konumunun etrafında küçük bir alanda arama yaparak en uygun eşleşmeyi bulur. Baskı hataları veya perspektif düzeltmesi sonrası kalan küçük kaymaları otomatik telafi eder.
+
+✅ AÇIK OLDUĞUNDA:
+• Her baloncuk için 3x3 veya 5x5 piksellik alanda arama yapılır
+• En yüksek korelasyona sahip pozisyon seçilir
+• Küçük hizalama hataları otomatik düzeltilir
+• Daha güvenilir okuma sonuçları
+
+❌ KAPALI OLDUĞUNDA:
+• Baloncuklar tam hesaplanan pozisyonda aranır
+• İşlem %20-30 daha hızlı
+• Hizalama mükemmel olmalı
+
+🎯 NE ZAMAN KAPATILIR:
+• Çok hızlı tarama gerekiyorsa
+• Baskı kalitesi çok yüksekse ve hizalama mükemmelse
+• Tripod/sabit kurulum ile tutarlı çekim yapılıyorsa
+• Düşük güçlü cihazda (eski telefon) performans sorunu varsa
+
+💡 ÖNERİ: Çoğu durumda AÇIK tutun. Sadece hız kritikse ve ortam koşulları idealse kapatın.">Offset Arama</label>
+                    <input type="checkbox" id="offsetSearchEnabled" checked title="🔎 OFFSET ARAMA: Baloncukları dinamik arar. AÇIK = güvenilir. KAPALI = hızlı ama hassas hizalama gerekir.">
                   </div>
                 </div>
               </div>
@@ -385,20 +687,127 @@
                 <div class="settings-section-title">📊 Güven & Doğrulama</div>
                 <div class="settings-grid">
                   <div class="setting-item">
-                    <label title="Aynı formu birden fazla kez okuyup sonuçları karşılaştırarak doğruluk artırır">Multi-Read</label>
-                    <input type="checkbox" id="multiReadEnabled" title="Çoklu okuma modu. Her kare birden fazla analiz edilir ve en tutarlı sonuç seçilir">
+                    <label title="🔄 MULTI-READ (Çoklu Okuma Modu)
+
+📌 NE YAPAR: Aynı görüntüyü farklı eşik değerleri ve parametrelerle birden fazla kez analiz eder. Sonuçlar karşılaştırılır ve en tutarlı (en çok tekrar eden) sonuç seçilir.
+
+✅ AÇIK OLDUĞUNDA:
+• Her soru birden fazla kez okunur (varsayılan: 3 kez)
+• Her okumada eşik değeri hafifçe değiştirilir
+• Okumalar arasında çoğunluk oylaması yapılır
+• Tutarsızlık varsa uyarı verilir
+
+📋 ÖRNEK:
+Soru 15 için 3 okuma sonucu: A, A, B
+→ Sonuç: A (%66 güven)
+→ Bir okuma farklı olduğu için düşük güven uyarısı
+
+🎯 NE ZAMAN KULLANILIR:
+• Önemli/resmi sınavlarda (YKS, KPSS vb.)
+• Düşük kaliteli görüntülerde
+• Belirsiz işaretlemeler olduğunda
+• Maksimum doğruluk gerektiğinde
+
+⚠️ DEZAVANTAJ: İşlem süresi 2-4 kat artar. Her form için birkaç saniye ek süre.
+
+💡 ÖNERİ: Kritik sınavlarda açın. Hızlı toplu taramada kapalı tutun ve sorunlu formları sonra tekrar tarayın.">Multi-Read</label>
+                    <input type="checkbox" id="multiReadEnabled" title="🔄 MULTI-READ: Her soruyu birden fazla okur, en tutarlı sonucu seçer. Yavaş ama çok güvenilir.">
                   </div>
                   <div class="setting-item">
-                    <label title="Multi-Read modunda kaç kez okunacağını belirler">Okuma Sayısı</label>
-                    <input type="number" id="multiReadIterations" value="3" min="2" max="5" step="1" title="Multi-Read tekrar sayısı (2-5). Daha fazla = daha güvenilir ama yavaş">
+                    <label title="🔢 OKUMA SAYISI (Multi-Read İterasyon)
+
+📌 NE YAPAR: Multi-Read modunda her soru için kaç farklı okuma yapılacağını belirler. Her okumada eşik değeri ve bazı parametreler hafifçe değiştirilir.
+
+🔢 DEĞER REHBERİ:
+• 2: Minimum - sadece iki okuma, basit karşılaştırma
+• 3: Standart varsayılan - iyi denge
+• 4: Yüksek güvenilirlik
+• 5: Maksimum güvenilirlik - en yavaş
+
+📋 ÇOĞUNLUK OYLAMASI:
+• 3 okuma: 2/3 aynı = sonuç kabul
+• 5 okuma: 3/5 aynı = sonuç kabul
+• Çoğunluk sağlanamazsa 'belirsiz' uyarısı
+
+🎯 NE ZAMAN ARTIRMALI:
+• Görüntü kalitesi çok düşükse
+• İşaretlemeler belirsizse (silinmiş/düzeltilmiş)
+• Tek bir hatalı sonuç bile kabul edilemezse
+• Kritik sınavlarda
+
+⚠️ İŞLEM SÜRESİ:
+• 3 okuma: ~1.5-2 saniye/form
+• 5 okuma: ~2.5-3 saniye/form
+(Cihaz performansına göre değişir)">Okuma Sayısı</label>
+                    <input type="number" id="multiReadIterations" value="3" min="2" max="5" step="1" title="🔢 OKUMA SAYISI: 3 = standart denge. 5 = maksimum güvenilirlik. 2 = hızlı ama daha az güvenilir.">
                   </div>
                   <div class="setting-item">
-                    <label title="İki baloncuk arasındaki minimum doluluk farkı. Bu farkın altında belirsiz kabul edilir">Gap Eşiği</label>
-                    <input type="number" id="gapThreshold" value="0.06" min="0.02" max="0.15" step="0.01" title="Minimum fark eşiği (0.02-0.15). İki şık çok yakın değerde ise uyarı verir">
+                    <label title="📊 GAP EŞİĞİ (Belirsizlik Farkı)
+
+📌 NE YAPAR: Bir soruda en yüksek ve ikinci en yüksek doluluklu baloncuklar arasındaki minimum farkı belirler. Bu fark yeterli değilse 'BELİRSİZ' uyarısı verilir.
+
+🔢 DEĞER REHBERİ:
+• 0.02-0.04: Çok toleranslı - neredeyse her farkı kabul eder
+• 0.05-0.07: Standart aralık
+• 0.08-0.10: Orta katılık
+• 0.11-0.15: Katı - belirgin fark gerektirir
+
+📋 ÖRNEK SENARYO:
+Soru 8'de doluluk oranları:
+A: 0.45, B: 0.12, C: 0.41, D: 0.08, E: 0.10
+En yüksek: A (0.45), İkinci: C (0.41)
+Fark: 0.45 - 0.41 = 0.04
+
+Eğer GAP EŞİĞİ = 0.06 ise:
+→ 0.04 < 0.06 olduğundan 'BELİRSİZ' uyarısı verilir
+→ Öğrenci muhtemelen önce C'yi işaretlemiş, silmiş, sonra A'yı işaretlemiş
+
+🎯 NE ZAMAN KULLANIŞLI:
+• Silinmiş/düzeltilmiş cevapları tespit etmek için
+• İki şık arası kararsızlığı belirlemek için
+• Okuma güvenilirliğini değerlendirmek için
+
+💡 ÖNERİ: 0.06'da bırakın. Çok fazla 'belirsiz' uyarısı alıyorsanız 0.04'e düşürün.">Gap Eşiği</label>
+                    <input type="number" id="gapThreshold" value="0.06" min="0.02" max="0.15" step="0.01" title="📊 GAP EŞİĞİ: En dolu iki şık arasındaki minimum fark. 0.06 = standart. Silinmiş cevapları tespit eder.">
                   </div>
                   <div class="setting-item">
-                    <label title="Beklenmeyen desenleri (tüm boş, tüm dolu, çoklu işaret) tespit edip uyarır">Anomali Tespiti</label>
-                    <input type="checkbox" id="anomalyDetectionEnabled" checked title="Anormal işaretleme tespiti. Şüpheli cevap kalıplarını raporlar">
+                    <label title="⚠️ ANOMALİ TESPİTİ (Şüpheli Kalıp Algılama)
+
+📌 NE YAPAR: İşaretleme kalıplarını analiz ederek olağandışı veya şüpheli durumları tespit edip uyarı verir.
+
+🔍 TESPİT EDİLEN ANOMALİLER:
+
+1️⃣ TÜM BOŞ:
+• Hiçbir soru işaretlenmemiş
+• Öğrenci formu boş bırakmış olabilir
+• Veya okuma tamamen başarısız olmuş
+
+2️⃣ TÜM AYNI ŞIK:
+• Tüm cevaplar aynı harf (örn. hep A)
+• Rastgele işaretleme göstergesi
+• Veya öğrenci 'hepsine A yap' stratejisi kullanmış
+
+3️⃣ SIRALAMA DESENİ:
+• ABCDE ABCDE ABCDE... gibi tekrar
+• ABCDEDCBA... gibi dalgalı desen
+• Rastgele işaretleme göstergesi
+
+4️⃣ ÇOK FAZLA ÇİFT İŞARET:
+• Birçok soruda birden fazla şık işaretli
+• Form dikkatsizce doldurulmuş
+• Veya okuma parametresi sorunu var
+
+5️⃣ AŞIRI BOŞ ORAN:
+• Çok fazla soru boş bırakılmış (örn. %70+)
+• Öğrenci sınavı yarıda bırakmış olabilir
+
+🎯 NE ZAMAN KULLANILIR:
+• Toplu taramada sorunlu formları tespit etmek için
+• Kopya girişimlerini yakalamak için
+• Form doldurma kalitesini değerlendirmek için
+
+💡 ÖNERİ: Her zaman AÇIK tutun. Uyarılar bilgilendirme amaçlıdır, sonuçları değiştirmez.">Anomali Tespiti</label>
+                    <input type="checkbox" id="anomalyDetectionEnabled" checked title="⚠️ ANOMALİ TESPİTİ: Şüpheli kalıpları (tüm aynı, desen, çok boş) tespit edip uyarır.">
                   </div>
                 </div>
               </div>
@@ -408,20 +817,121 @@
                 <div class="settings-section-title">📐 Hizalama Rehberi</div>
                 <div class="settings-grid">
                   <div class="setting-item">
-                    <label title="Kamera görüntüsü üzerinde form hizalama yardımcısını gösterir">Rehber Aktif</label>
-                    <input type="checkbox" id="alignmentGuideEnabled" checked title="Hizalama rehberi. Formu doğru konumlandırmanıza yardımcı olur">
+                    <label title="📐 REHBER AKTİF (Hizalama Yardımcısı)
+
+📌 NE YAPAR: Kamera görüntüsü üzerinde yarı saydam bir çerçeve ve köşe işaretleri gösterir. Formu bu çerçeveye oturtarak doğru hizalamayı sağlamanıza yardımcı olur.
+
+🎨 GÖRSEL GERİ BİLDİRİM:
+• 🔴 KIRMIZI: Form bulunamadı veya çok uzakta
+• 🟡 SARI: Form bulundu ama hizalama yetersiz
+• 🟢 YEŞİL: Form doğru hizalandı, taramaya hazır
+
+📋 NASIL KULLANILIR:
+1. Formu kamera önüne getirin
+2. Formun köşelerini rehber çerçevesinin köşeleriyle hizalayın
+3. Rehber yeşile dönene kadar konumu ayarlayın
+4. Yeşil = 'Tara' butonuna basabilirsiniz
+
+🎯 NE ZAMAN AÇIK TUTULMALI:
+• Yeni başlayanlar için
+• Elle tutarak çekim yaparken
+• Formları hızlı hizalamak için
+• Görsel geri bildirim gerektiğinde
+
+🎯 NE ZAMAN KAPATILIR:
+• Sabit kurulum varsa (tripod + masa)
+• Ekran alanı sınırlıysa
+• Deneyimli kullanıcı olarak rehbere ihtiyaç yoksa
+
+💡 ÖNERİ: İlk kullanımlarda AÇIK tutun. Alıştıktan sonra tercih ederseniz kapatabilirsiniz.">Rehber Aktif</label>
+                    <input type="checkbox" id="alignmentGuideEnabled" checked title="📐 REHBER AKTİF: Ekranda hizalama çerçevesi gösterir. Form çerçeveye oturduğunda yeşile döner.">
                   </div>
                   <div class="setting-item">
-                    <label title="Kamera görüntüsü üzerinde yardımcı ızgara çizgileri gösterir">Izgara Göster</label>
-                    <input type="checkbox" id="showGrid" title="Hizalama ızgarası. Form kenarlarını düzgün hizalamanıza yardımcı olur">
+                    <label title="🔲 IZGARA GÖSTER (Grid Overlay)
+
+📌 NE YAPAR: Kamera görüntüsü üzerinde dikey ve yatay yardımcı çizgiler gösterir. Bu çizgiler formun düz tutulup tutulmadığını (eğik olup olmadığını) görmenize yardımcı olur.
+
+📋 NASIL KULLANILIR:
+• Formun kenarlarını ızgara çizgileriyle paralel tutun
+• Çizgiler forma göre eğik görünüyorsa, formu veya kamerayı döndürün
+• Özellikle üst ve sol kenarın çizgiyle paralel olmasına dikkat edin
+
+🎯 NE ZAMAN FAYDALI:
+• Form sürekli eğik çıkıyorsa
+• Elle tutarak çekim yaparken
+• Düz yüzey bulmak zorsa
+• Perspektif sorunları yaşanıyorsa
+
+💡 NOT: Bu çizgiler sadece görsel yardım içindir, okuma işlemini etkilemez. Eğik form bile okunabilir ama düz tutmak doğruluğu artırır.">Izgara Göster</label>
+                    <input type="checkbox" id="showGrid" title="🔲 IZGARA: Formun düz tutulduğunu kontrol için yardımcı çizgiler gösterir.">
                   </div>
                   <div class="setting-item">
-                    <label title="Hizalama başarılı sayılması için gereken tolerans. Düşük = daha hassas hizalama gerekir">Hedef Tolerans</label>
-                    <input type="number" id="alignmentTolerance" value="0.30" min="0.10" max="0.50" step="0.05" title="Hizalama toleransı (0.10-0.50). 0.30 standart, 0.15 hassas, 0.45 gevşek">
+                    <label title="🎯 HEDEF TOLERANS (Hizalama Hassasiyeti)
+
+📌 NE YAPAR: Hizalamanın 'başarılı' (yeşil ışık) sayılması için formun hedef çerçeveye ne kadar yakın olması gerektiğini belirler.
+
+🔢 DEĞER REHBERİ:
+• 0.10-0.15: Çok hassas - neredeyse mükemmel hizalama gerekir
+• 0.20-0.25: Hassas - iyi hizalama gerekir
+• 0.30: Standart varsayılan - makul tolerans
+• 0.35-0.40: Toleranslı - yaklaşık hizalama yeterli
+• 0.45-0.50: Çok toleranslı - kabaca hizalama yeterli
+
+🎯 DÜŞÜK DEĞER (0.15-0.25) NE ZAMAN:
+• Maksimum okuma doğruluğu gerektiğinde
+• Sabit kurulum (tripod) kullanırken
+• Az sayıda ama kritik form tararken
+• Oto-Tarama kapalıyken (manuel kontrol)
+
+🎯 YÜKSEK DEĞER (0.40-0.50) NE ZAMAN:
+• Hızlı toplu tarama yaparken
+• Elle tutarak çekim yaparken (titreme olabilir)
+• Oto-Tarama açıkken (hızlı geçiş için)
+• Hizalama zorlanıyorsa
+
+⚠️ DİKKAT: Çok düşük tolerans sürekli 'yeşil' almayı zorlaştırır ve kullanıcıyı sinirlendirebilir. Çok yüksek tolerans ise eğik formların taranmasına ve okuma hatalarına yol açabilir.
+
+💡 ÖNERİ: 0.30 ile başlayın. Çok sık 'yeşil' alamıyorsanız 0.40'a yükseltin.">Hedef Tolerans</label>
+                    <input type="number" id="alignmentTolerance" value="0.30" min="0.10" max="0.50" step="0.05" title="🎯 TOLERANS: 0.30 = standart. Hızlı tarama için 0.40. Hassas tarama için 0.20.">
                   </div>
                   <div class="setting-item">
-                    <label title="Form düzgün hizalandığında otomatik olarak tarama başlatır">Oto-Tarama</label>
-                    <input type="checkbox" id="autoScanOnReady" title="Otomatik tarama. Form hizalandığında beklemeden tarar - hızlı toplu okuma için">
+                    <label title="⚡ OTO-TARAMA (Otomatik Yakalama)
+
+📌 NE YAPAR: Form hizalama rehberine düzgün oturduğunda (yeşil ışık) otomatik olarak tarama/yakalama işlemini başlatır. 'Tara' butonuna basmanıza gerek kalmaz.
+
+📋 ÇALIŞMA AKIŞI:
+1. Formu kamera önüne getirin
+2. Rehber yeşile dönene kadar hizalayın
+3. Yeşil olduktan ~0.5 saniye sonra otomatik çekim
+4. Sonuç gösterilir
+5. Yeni form getirin, işlem tekrarlanır
+
+✅ AÇIK OLDUĞUNDA:
+• Eller serbest kalır
+• Butona basma gecikmesi olmaz
+• Çok sayıda formu hızlıca tarayabilirsiniz
+• Akıcı iş akışı
+
+❌ KAPALI OLDUĞUNDA:
+• Her form için manuel 'Tara' butonuna basmanız gerekir
+• Tam kontrol sizdedir
+• Yanlışlıkla çekim olmaz
+• Formu incelemek için zaman tanır
+
+🎯 NE ZAMAN AÇIK TUTULMALI:
+• Toplu form taramasında (10+ form)
+• Formlar benzer ve tutarlıysa
+• Hızlı geçiş gerekiyorsa
+• Eller meşgulse (form tutma/değiştirme)
+
+🎯 NE ZAMAN KAPALI TUTULMALI:
+• İlk deneme/test sırasında
+• Az sayıda kritik form tararken
+• Her formu tarammadan önce kontrol etmek istiyorsanız
+• Oto-tarama çok sık yanlış çekim yapıyorsa
+
+💡 ÖNERİ: Toplu taramada AÇIK, kritik sınavlarda KAPALI tutun.">Oto-Tarama</label>
+                    <input type="checkbox" id="autoScanOnReady" title="⚡ OTO-TARAMA: Yeşil ışık yandığında otomatik tarama yapar. Toplu okuma için ideal.">
                   </div>
                 </div>
               </div>
@@ -431,33 +941,156 @@
                 <div class="settings-section-title">⚡ Performans</div>
                 <div class="settings-grid">
                   <div class="setting-item">
-                    <label title="Yakalanan görüntünün maksimum boyutu. Küçük = hızlı işlem, büyük = detaylı analiz">Max Boyut (px)</label>
-                    <input type="number" id="captureMaxDim" value="1280" min="640" max="1920" step="160" title="Görüntü boyutu (640-1920px). 1280 dengeli, 960 hızlı, 1600+ yüksek detay">
+                    <label title="📐 MAX BOYUT (Maksimum Görüntü Boyutu)
+
+📌 NE YAPAR: Kameradan alınan görüntünün işlenmeden önce yeniden boyutlandırılacağı maksimum piksel değerini belirler (genişlik veya yükseklikten büyük olanı).
+
+🔢 DEĞER REHBERİ:
+• 640px: Çok düşük - hızlı ama detay kaybı
+• 800px: Düşük - eski/yavaş cihazlar için
+• 960px: Orta-düşük - mobil cihazlar için iyi
+• 1280px: Standart varsayılan - ideal denge
+• 1440px: Yüksek - iyi kamera + güçlü cihaz
+• 1600px: Çok yüksek - maksimum detay
+• 1920px: Maksimum - sadece güçlü bilgisayarlar
+
+📊 ETKİSİ:
+
+KÜÇÜK BOYUT (640-960):
+✅ Hızlı işlem (yarı süre)
+✅ Düşük bellek kullanımı
+✅ Eski cihazlarda çalışır
+❌ Küçük baloncuklar zor okunur
+❌ Detay kaybı olabilir
+
+BÜYÜK BOYUT (1440-1920):
+✅ Yüksek detay
+✅ Küçük baloncuklar bile net
+✅ Daha doğru okuma
+❌ Yavaş işlem (2-3 kat)
+❌ Yüksek bellek kullanımı
+❌ Eski cihazlarda takılabilir
+
+🎯 CİHAZ ÖNERİLERİ:
+• Eski telefon (3+ yıllık): 800-960px
+• Orta segment telefon: 960-1280px
+• Yeni telefon / tablet: 1280-1440px
+• Laptop / masaüstü: 1280-1600px
+
+💡 ÖNERİ: 1280px ile başlayın. Yavaşlık varsa düşürün, detay sorunu varsa artırın.">Max Boyut (px)</label>
+                    <input type="number" id="captureMaxDim" value="1280" min="640" max="1920" step="160" title="📐 MAX BOYUT: 1280 = standart. Yavaş cihazda 960. Detay için 1600.">
                   </div>
                   <div class="setting-item">
-                    <label title="Bu değerin altında bulanıklık uyarısı verilir. Laplacian varyansı ölçüsü">Bulanıklık Uyarı</label>
-                    <input type="number" id="blurVarWarn" value="25" min="10" max="50" step="5" title="Bulanıklık uyarı eşiği (10-50). Bu değerin altında 'bulanık olabilir' uyarısı">
+                    <label title="⚠️ BULANIKLIK UYARI (Blur Warning Threshold)
+
+📌 NE YAPAR: Görüntünün netlik skorunu hesaplar (Laplacian varyansı yöntemi) ve bu değerin altında 'BULANIK OLABİLİR' uyarısı gösterir. Uyarıya rağmen okuma denenir.
+
+🔬 TEKNİK AÇIKLAMA:
+Laplacian varyansı, görüntüdeki kenarların keskinliğini ölçer.
+• Yüksek değer = keskin kenarlar = net görüntü
+• Düşük değer = yumuşak kenarlar = bulanık görüntü
+
+🔢 DEĞER REHBERİ:
+• 10-15: Çok toleranslı - nadiren uyarı verir
+• 20-25: Standart aralık
+• 30-40: Hassas - sık uyarı verebilir
+• 45-50: Çok hassas - mükemmel netlik gerekir
+
+🎯 NE ZAMAN AZALTILIR (15-20):
+• Çok fazla yanlış uyarı alıyorsanız
+• Kamera kalitesi düşükse
+• Işık yetersizse (ISO yüksek = doğal gürültü)
+
+🎯 NE ZAMAN ARTIRILIR (30-40):
+• Kaliteli kamera kullanıyorsanız
+• Tripod/sabit kurulum varsa
+• Bulanık görüntülerin erken uyarılmasını istiyorsanız
+
+💡 NOT: Bu sadece UYARI verir, görüntüyü reddetmez. Reddedecek eşik için 'Bulanıklık Red' ayarını kullanın.">Bulanıklık Uyarı</label>
+                    <input type="number" id="blurVarWarn" value="25" min="10" max="50" step="5" title="⚠️ BULANIKLIK UYARI: Bu değerin altında uyarı verir. 25 = standart. 15 = toleranslı.">
                   </div>
                   <div class="setting-item">
-                    <label title="Bu değerin altında görüntü reddedilir. Çok bulanık görüntüleri engeller">Bulanıklık Red</label>
-                    <input type="number" id="blurVarReject" value="12" min="5" max="25" step="1" title="Bulanıklık red eşiği (5-25). Bu değerin altındaki görüntüler 'çok bulanık' olarak reddedilir">
+                    <label title="🚫 BULANIKLIK RED (Blur Reject Threshold)
+
+📌 NE YAPAR: Görüntünün netlik skoru bu değerin altına düşerse görüntü TAMAMEN REDDEDİLİR ve okuma yapılmaz. Çok bulanık görüntülerden yanlış sonuç almayı önler.
+
+⚠️ UYARI vs RED FARKI:
+• UYARI eşiği: Kullanıcıyı bilgilendirir, okuma yine yapılır
+• RED eşiği: Görüntü işlenmez, yeniden çekim istenir
+
+🔢 DEĞER REHBERİ:
+• 5-8: Çok toleranslı - neredeyse her görüntüyü kabul eder
+• 10-12: Standart aralık
+• 15-20: Katı - sadece net görüntüler kabul
+• 22-25: Çok katı - mükemmel netlik gerekir
+
+🎯 DÜŞÜK DEĞER (5-10) NE ZAMAN:
+• Düşük kaliteli kamera kullanılıyorsa
+• Işık koşulları zor ise
+• 'Görüntü çok bulanık' hatası sık alınıyorsa
+• Bazı bulanık ama okunabilir görüntüler reddediliyorsa
+
+🎯 YÜKSEK DEĞER (15-20) NE ZAMAN:
+• Kaliteli kamera ve iyi ışık varsa
+• Hatalı okumalardan kaçınmak kritikse
+• Tripod/sabit kurulum kullanılıyorsa
+• Kullanıcının kaliteli çekim yapması zorlanmak isteniyorsa
+
+⚠️ DİKKAT: Red eşiği, uyarı eşiğinden DÜŞÜK olmalıdır. Örneğin: Uyarı=25, Red=12.
+
+💡 ÖNERİ: 12'de bırakın. Çok fazla red alıyorsanız 8'e düşürün.">Bulanıklık Red</label>
+                    <input type="number" id="blurVarReject" value="12" min="5" max="25" step="1" title="🚫 BULANIKLIK RED: Bu değerin altında görüntü reddedilir. 12 = standart. 8 = toleranslı.">
                   </div>
                   <div class="setting-item">
-                    <label title="Sonuç görüntülerinde debug bilgilerini (marker çerçeveleri, baloncuk durumları) gösterir">Debug Çizim</label>
-                    <input type="checkbox" id="debugDrawEnabled" checked title="Debug görselleştirme. Marker ve baloncuk tespitini görsel olarak gösterir">
+                    <label title="🔧 DEBUG ÇİZİM (Tanısal Görselleştirme)
+
+📌 NE YAPAR: İşlem sonucunda oluşan görüntüler üzerine tanısal bilgiler çizer. Marker konumları, baloncuk durumları ve tespit sonuçları renkli olarak gösterilir.
+
+🎨 GÖSTERİLEN BİLGİLER:
+
+📍 MARKER TESPİTİ:
+• Dört köşedeki markerlar yeşil çerçeveyle işaretlenir
+• Marker kalite puanları gösterilir
+• Perspektif düzeltme çizgileri çizilir
+
+⭕ BALONCUK DURUMU:
+• 🟢 Yeşil: İşaretli (dolu) baloncuk
+• ⚪ Beyaz/Gri: Boş baloncuk
+• 🔴 Kırmızı: Belirsiz veya sorunlu
+• 🟡 Sarı: Çoklu işaret uyarısı
+
+📊 EK BİLGİLER:
+• Soru numaraları
+• Seçilen şık harfi
+• Doluluk yüzdesi (istenirse)
+
+🎯 NE ZAMAN KULLANIŞLI:
+• Neden bir baloncuğun yanlış okunduğunu anlamak için
+• Marker tespitinin başarılı olup olmadığını görmek için
+• Hizalama kalitesini değerlendirmek için
+• Sorunlu formları analiz etmek için
+• Sistemi öğrenirken/test ederken
+
+🎯 NE ZAMAN KAPATILIR:
+• Sadece sonuç numaralarıyla ilgileniyorsanız
+• Görüntüleri kaydetmeyecekseniz
+• Çok düşük performanslı cihazda (minimal etki)
+
+💡 ÖNERİ: Her zaman AÇIK tutun. Görsel geri bildirim sorun tespitinde çok değerlidir.">Debug Çizim</label>
+                    <input type="checkbox" id="debugDrawEnabled" checked title="🔧 DEBUG ÇİZİM: Sonuç görüntüsünde marker ve baloncukları renkli işaretler. Sorun tespiti için açık tutun.">
                   </div>
                 </div>
               </div>
 
               <!-- Preset'ler -->
               <div class="settings-section">
-                <div class="settings-section-title" title="Farklı ortamlar için optimize edilmiş hazır ayar setleri">💾 Hazır Ayarlar</div>
+                <div class="settings-section-title" title="💾 HAZIR AYARLAR: Farklı kullanım senaryoları için optimize edilmiş ayar setleri. Bir preset'e tıkladığınızda tüm gelişmiş ayarlar o senaryo için en uygun değerlere otomatik ayarlanır. Sonrasında isterseniz tek tek değerleri değiştirebilirsiniz.">💾 Hazır Ayarlar</div>
                 <div class="preset-buttons">
-                  <button class="btn secondary preset-btn" data-preset="balanced" title="Çoğu durum için dengeli ayarlar. Hız ve doğruluk arasında optimum denge">⚖️ Dengeli</button>
-                  <button class="btn secondary preset-btn" data-preset="lowlight" title="Düşük ışık, gölgeli ortamlar için. CLAHE ve gölge kaldırma aktif">🌙 Düşük Işık</button>
-                  <button class="btn secondary preset-btn" data-preset="highquality" title="En yüksek doğruluk için. Multi-read ve tüm iyileştirmeler aktif, yavaş">✨ Yüksek Kalite</button>
-                  <button class="btn secondary preset-btn" data-preset="fast" title="Hızlı toplu tarama için. Minimum işleme, hızlı sonuç">⚡ Hızlı</button>
-                  <button class="btn secondary preset-btn" data-preset="robust" title="Zor koşullar için. Eğik, buruşuk, düşük kalite baskılar">🛡️ Robust</button>
+                  <button class="btn secondary preset-btn" data-preset="balanced" title="⚖️ DENGELİ: Çoğu normal kullanım için önerilen varsayılan ayarlar. İyi aydınlatılmış ortamda, standart baskı kalitesinde formlar için hız ve doğruluk arasında optimum denge sağlar. Nereden başlayacağınızı bilmiyorsanız bunu seçin.">⚖️ Dengeli</button>
+                  <button class="btn secondary preset-btn" data-preset="lowlight" title="🌙 DÜŞÜK IŞIK: Karanlık ortamlar, gölgeli masalar, akşam saatleri veya pencere ışığı alan odalar için. CLAHE kontrast iyileştirme, gölge kaldırma ve beyaz dengesi aktif edilir. Görüntü işleme biraz yavaşlar ama düşük ışıkta okuma doğruluğu önemli ölçüde artar.">🌙 Düşük Işık</button>
+                  <button class="btn secondary preset-btn" data-preset="highquality" title="✨ YÜKSEK KALİTE: Kritik sınavlar veya maksimum doğruluk gereken durumlar için. Multi-read aktif (her soru 3 kez okunur), yüksek çözünürlük, tüm iyileştirmeler aktif. İşlem süresi 3-4 kat artar ama yanlış okuma riski minimize edilir. ÖSYM tarzı önemli sınavlarda kullanın.">✨ Yüksek Kalite</button>
+                  <button class="btn secondary preset-btn" data-preset="fast" title="⚡ HIZLI: Çok sayıda formu hızlıca taramak için. Görüntü işleme minimumda tutulur, düşük çözünürlük kullanılır, offset arama kapalı. En hızlı okuma sağlar ama görüntü kalitesi iyi olmalıdır. İyi ışık ve düzgün hizalanmış formlarla kullanın.">⚡ Hızlı</button>
+                  <button class="btn secondary preset-btn" data-preset="robust" title="🛡️ ROBUST: Zor koşullarda okuma için. Eğik tutulan formlar, buruşuk kağıtlar, düşük kaliteli baskılar, eski/sararmış kağıtlar. Toleranslar artırılır, gölge kaldırma ve beyaz dengesi aktif, skew limiti genişletilir. Her şeyi okumaya çalışır ama yanlış pozitif riski biraz artar.">🛡️ Robust</button>
                 </div>
               </div>
 
