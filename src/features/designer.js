@@ -115,11 +115,11 @@ export function drawForm(cfg) {
     ctx.scale(scale, scale);
 
     ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillRect(0, 0, cfg.formWidth, cfg.formHeight);
 
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 2;
-    ctx.strokeRect(1, 1, canvas.width - 2, canvas.height - 2);
+    ctx.strokeRect(1, 1, cfg.formWidth - 2, cfg.formHeight - 2);
 
     drawCornerMarkers(ctx, cfg.formWidth, cfg.formHeight);
 
